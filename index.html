@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Ticket — Job & Invoice Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&family=Questrial&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -44,7 +44,7 @@
     margin:0;
   }
   .mono{font-family:'IBM Plex Mono',monospace;}
-  .brand-font{font-family:'Fredoka',sans-serif;font-weight:700;text-transform:none;letter-spacing:0;}
+  .brand-font{font-family:'Questrial',sans-serif;font-weight:400;text-transform:uppercase;letter-spacing:0.04em;}
   #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:78px;}
   button{font-family:inherit;}
 
@@ -59,7 +59,7 @@
     background:conic-gradient(from 90deg, #8a8f98, #f2f2f2, #6b6f77, #ffffff, #9a9ea5, #f2f2f2, #8a8f98);
     border:2px solid var(--ink);
   }
-  .login-screen h1{font-size:44px;line-height:0.95;color:var(--paper);letter-spacing:0.01em;}
+  .login-screen h1{font-size:42px;line-height:1;color:var(--paper);}
   .login-screen h1 .dot{color:var(--orange);}
   .login-screen .tag{color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;margin-top:10px;margin-bottom:36px;text-transform:uppercase;}
   .field{margin-bottom:14px;}
@@ -128,7 +128,7 @@
   .cc-chrome .cc-tag{color:var(--orange);}
   .cc-stripe .cc-tag{color:var(--ink);}
   .cc-agenda{grid-area:agenda;background:var(--ink);color:var(--paper);padding:14px;display:flex;align-items:flex-end;min-height:80px;}
-  .cc-agenda .cc-agenda-label{font-family:'Fredoka',sans-serif;font-size:17px;font-weight:700;}
+  .cc-agenda .cc-tag{color:var(--yellow);}
   .cc-money{grid-area:money;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;min-height:170px;}
   .cc-money .cc-money-label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:rgba(28,30,34,0.5);}
   .cc-money .cc-gold-num{font-family:'Barlow Condensed';font-weight:800;font-size:38px;color:var(--gold);line-height:1.1;margin-top:2px;}
@@ -311,7 +311,7 @@
           <span class="cc-tag">→ See invoices &amp; estimates</span>
         </div>
         <div class="cc-cell cc-agenda" onclick="openAgenda()">
-          <span class="cc-agenda-label">Agenda</span>
+          <span class="cc-tag">Agenda</span>
         </div>
       </div>
 
