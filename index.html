@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Ticket — Job & Invoice Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -15,7 +15,9 @@
     --paper-dim:#EDEAE2;
     --yellow:#F5C826;
     --yellow-deep:#D9A800;
-    --orange:#E85D2C;
+    --orange:#FE7F2D;
+    --charcoal:#233D4D;
+    --gold:#C9A227;
     --blue:#2C5F7C;
     --blue-soft:#4A7E9B;
     --green:#3E8914;
@@ -42,6 +44,7 @@
     margin:0;
   }
   .mono{font-family:'IBM Plex Mono',monospace;}
+  .brand-font{font-family:'Fredoka',sans-serif;font-weight:700;text-transform:none;letter-spacing:0;}
   #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:78px;}
   button{font-family:inherit;}
 
@@ -108,19 +111,29 @@
 
   /* ---------- COMPOSITE NAV CARD (tappable squares/rectangles) ---------- */
   .composite-card{
-    display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto;
-    grid-template-areas:"logo logo chrome" "stripe content content";
+    display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
+    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money";
     gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:14px;
     overflow:hidden;box-shadow:var(--shadow-hard);margin-bottom:4px;
   }
   .cc-cell{cursor:pointer;transition:filter .06s ease, transform .06s ease;}
   .cc-cell:active{filter:brightness(0.92);}
   .cc-logo{grid-area:logo;background:var(--paper);padding:18px 18px 16px;}
-  .cc-logo .cc-label{font-family:'Barlow Condensed';font-size:24px;font-weight:800;text-transform:uppercase;color:var(--ink);}
+  .cc-logo .cc-label{font-family:'Fredoka',sans-serif;font-size:24px;font-weight:700;text-transform:none;color:var(--ink);}
   .cc-logo .cc-label .dot{color:var(--orange);}
   .cc-logo .cc-sub{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:4px;}
-  .cc-chrome{grid-area:chrome;background:conic-gradient(from 90deg, #8a8f98, #f2f2f2, #6b6f77, #ffffff, #9a9ea5, #f2f2f2, #8a8f98);min-height:74px;}
-  .cc-stripe{grid-area:stripe;background:var(--hazard);min-height:88px;}
+  .cc-chrome{grid-area:chrome;background:var(--charcoal);min-height:74px;position:relative;display:flex;align-items:flex-end;padding:9px;}
+  .cc-stripe{grid-area:stripe;background:var(--orange);min-height:88px;position:relative;display:flex;align-items:flex-end;padding:9px;}
+  .cc-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.03em;text-transform:uppercase;}
+  .cc-chrome .cc-tag{color:var(--orange);}
+  .cc-stripe .cc-tag{color:var(--ink);}
+  .cc-agenda{grid-area:agenda;background:var(--ink);color:var(--paper);padding:14px;display:flex;align-items:flex-end;min-height:80px;}
+  .cc-agenda .cc-agenda-label{font-family:'Fredoka',sans-serif;font-size:17px;font-weight:700;}
+  .cc-money{grid-area:money;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;min-height:170px;}
+  .cc-money .cc-money-label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:rgba(28,30,34,0.5);}
+  .cc-money .cc-gold-num{font-family:'Barlow Condensed';font-weight:800;font-size:38px;color:var(--gold);line-height:1.1;margin-top:2px;}
+  .cc-money .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);margin-top:6px;line-height:1.5;}
+  .cc-money .cc-tag{color:var(--blue);margin-top:8px;display:inline-block;}
   .cc-content{grid-area:content;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;}
   .cc-content .cc-title{font-family:'Barlow Condensed';font-size:22px;font-weight:800;text-transform:uppercase;color:var(--ink);}
   .cc-content .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:5px;line-height:1.5;}
@@ -253,7 +266,7 @@
   <!-- ===================== LOGIN ===================== -->
   <div id="loginScreen" class="login-screen">
     <div class="brand"><div class="chrome-swatch"></div></div>
-    <h1>TICKET<span class="dot">.</span></h1>
+    <h1 class="brand-font">TICKET<span class="dot">.</span></h1>
     <div class="tag">Jobs · Quotes · Invoices — one app</div>
 
     <div class="field">
@@ -273,7 +286,7 @@
   <div id="ownerApp" class="hidden">
     <div class="topbar">
       <div>
-        <div class="co-name" id="ownerCoName">407 RENOVATIONS<span class="dot">.</span></div>
+        <div class="co-name brand-font" id="ownerCoName">407 RENOVATIONS<span class="dot">.</span></div>
         <span class="role-pill">Owner</span>
       </div>
       <div style="display:flex;gap:8px;">
@@ -289,11 +302,16 @@
           <div class="cc-label">JOBS<span class="dot">.</span></div>
           <div class="cc-sub mono" id="ccJobsSub">0 open</div>
         </div>
-        <div class="cc-cell cc-chrome" onclick="openAddMenu()"></div>
-        <div class="cc-cell cc-stripe" onclick="showOwnerTab('customers')"></div>
-        <div class="cc-cell cc-content" onclick="showOwnerTab('money')">
-          <div class="cc-title">Cash Flow</div>
+        <div class="cc-cell cc-chrome" onclick="openAddMenu()"><span class="cc-tag">→ New</span></div>
+        <div class="cc-cell cc-stripe" onclick="showOwnerTab('customers')"><span class="cc-tag">→ Customers</span></div>
+        <div class="cc-cell cc-money" onclick="showOwnerTab('money')">
+          <div class="cc-money-label">Money Coming</div>
+          <div class="cc-gold-num" id="ccGoldNum">$0</div>
           <div class="cc-desc" id="ccMoneySub">$0 open invoices</div>
+          <span class="cc-tag">→ See invoices &amp; estimates</span>
+        </div>
+        <div class="cc-cell cc-agenda" onclick="openAgenda()">
+          <span class="cc-agenda-label">Agenda</span>
         </div>
       </div>
 
@@ -330,6 +348,15 @@
       <div id="invoicesList"></div>
     </div>
 
+    <!-- AGENDA (full page, opened only from the composite tile) -->
+    <div id="ownerTab-agenda" class="content tabpane hidden">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
+        <h2 style="font-size:20px;">Agenda</h2>
+      </div>
+      <div id="agendaList"></div>
+    </div>
+
     <button class="fab" onclick="openAddMenu()">+</button>
 
     <div class="bottomnav">
@@ -344,7 +371,7 @@
   <div id="helperApp" class="hidden">
     <div class="topbar">
       <div>
-        <div class="co-name">MY JOBS</div>
+        <div class="co-name brand-font">MY JOBS</div>
         <span class="role-pill">Helper</span>
       </div>
       <button class="icon-btn" onclick="logout()">⎋</button>
@@ -544,6 +571,9 @@ function renderOwner(){
   const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
   document.getElementById('ccJobsSub').textContent = openJobsCount + ' open';
   document.getElementById('ccMoneySub').textContent = '$'+openTotal.toLocaleString()+' open invoices · '+db.estimates.filter(e=>e.status==='sent').length+' estimates pending';
+  const moneyComing = openTotal + db.estimates.filter(e=>e.status==='sent').reduce((s,e)=>s+itemsTotal(e.items),0);
+  document.getElementById('ccGoldNum').textContent = '$'+moneyComing.toLocaleString();
+  renderAgenda();
 }
 function emptyState(glyph, text){ return `<div class="empty-state"><div class="glyph">${glyph}</div><p>${text}</p></div>`; }
 function renderHelper(){
@@ -554,7 +584,24 @@ function showOwnerTab(tab){
   document.querySelectorAll('.tabpane').forEach(el=>el.classList.add('hidden'));
   document.getElementById('ownerTab-'+tab).classList.remove('hidden');
   document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`.navbtn[data-tab="${tab}"]`).classList.add('active');
+  const btn = document.querySelector(`.navbtn[data-tab="${tab}"]`);
+  if(btn) btn.classList.add('active');
+}
+function openAgenda(){ renderAgenda(); showOwnerTab('agenda'); }
+function renderAgenda(){
+  const buckets = [['Today',[]], ['Tomorrow',[]], ['Everything else',[]]];
+  db.jobs.forEach(j=>{
+    const w = j.when||'';
+    if(w.startsWith('Today')) buckets[0][1].push(j);
+    else if(w.startsWith('Tomorrow')) buckets[1][1].push(j);
+    else buckets[2][1].push(j);
+  });
+  let html='';
+  buckets.forEach(([label,list])=>{
+    if(list.length===0) return;
+    html += `<div class="section-head"><h2>${label}</h2><span class="count">${list.length}</span></div>${list.map(ticketHTML).join('')}`;
+  });
+  document.getElementById('agendaList').innerHTML = html || emptyState('📅','Nothing scheduled yet.');
 }
 
 function enterApp(role){
