@@ -40,6 +40,7 @@
   }
   .mono{font-family:'IBM Plex Mono',monospace;}
   #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:78px;}
+  button{font-family:inherit;}
 
   /* ---------- LOGIN ---------- */
   .login-screen{
@@ -51,12 +52,16 @@
   .login-screen h1{font-size:42px;line-height:0.95;color:var(--paper);}
   .login-screen .tag{color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;margin-top:8px;margin-bottom:36px;text-transform:uppercase;}
   .field{margin-bottom:14px;}
-  .field label{display:block;font-size:12px;color:rgba(247,245,240,0.6);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;}
+  .field label{display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;}
+  .login-screen .field label{color:rgba(247,245,240,0.6);}
   .field input, .field select, .field textarea{
-    width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid rgba(247,245,240,0.18);
-    background:rgba(247,245,240,0.06);color:var(--paper);font-size:15px;font-family:'Inter',sans-serif;
+    width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:var(--ink);font-size:15px;font-family:'Inter',sans-serif;
   }
-  .field input::placeholder{color:rgba(247,245,240,0.35);}
+  .login-screen .field input{border:1.5px solid rgba(247,245,240,0.18);background:rgba(247,245,240,0.06);color:var(--paper);}
+  .field input::placeholder, .field textarea::placeholder{color:rgba(28,30,34,0.3);}
+  .field textarea{resize:vertical;min-height:70px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .btn{
     display:flex;align-items:center;justify-content:center;gap:8px;
     padding:15px 20px;border-radius:10px;border:none;font-size:15px;font-weight:600;
@@ -65,8 +70,9 @@
   .btn:active{transform:scale(0.98);}
   .btn-primary{background:var(--yellow);color:var(--ink);}
   .btn-ghost{background:transparent;color:var(--paper);border:1.5px solid rgba(247,245,240,0.25);margin-top:10px;}
+  .btn-danger{background:transparent;color:var(--red);border:1.5px solid rgba(193,68,14,0.3);}
+  .btn-secondary{background:var(--paper-dim);color:var(--ink);}
   .switch-role{margin-top:22px;text-align:center;font-size:13px;color:rgba(247,245,240,0.5);}
-  .switch-role button{background:none;border:none;color:var(--yellow);font-weight:600;cursor:pointer;font-size:13px;}
 
   /* ---------- TOP BAR ---------- */
   .topbar{
@@ -100,38 +106,50 @@
   .stat-card .label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;opacity:.6;margin-top:6px;}
   .stat-card.yellow{background:var(--yellow);color:var(--ink);}
 
-  /* ---------- WORK TICKET CARD (signature element) ---------- */
+  /* ---------- PULSE (status breakdown) ---------- */
+  .pulse-card{
+    background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:10px;
+  }
+  .pulse-card .pulse-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .pulse-card .pulse-head h3{font-size:15px;color:var(--ink);}
+  .pulse-card .pulse-head .total{font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.45);}
+  .pulse-bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--paper-dim);margin-bottom:10px;}
+  .pulse-bar .seg{height:100%;}
+  .pulse-legend{display:flex;flex-wrap:wrap;gap:10px 14px;}
+  .pulse-legend .item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(28,30,34,0.65);font-family:'IBM Plex Mono',monospace;}
+  .pulse-legend .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+  /* ---------- WORK TICKET CARD ---------- */
   .ticket{
     position:relative;background:#fff;border-radius:var(--radius);
     border:1.5px solid var(--line);margin-bottom:12px;overflow:hidden;
-    display:flex;
+    display:flex;cursor:pointer;transition:border-color .1s ease;
   }
+  .ticket:active{border-color:rgba(28,30,34,0.3);}
   .ticket .stripe{width:8px;flex-shrink:0;background:var(--blue);}
-  .ticket.status-scheduled .stripe{background:var(--blue);}
+  .ticket.status-scheduled .stripe, .ticket.status-sent .stripe, .ticket.status-draft .stripe{background:var(--blue);}
   .ticket.status-in_progress .stripe{background:var(--yellow-deep);}
-  .ticket.status-completed .stripe{background:var(--green);}
-  .ticket.status-invoiced .stripe{background:#8a8f98;}
+  .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
+  .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
   .ticket .punch-hole{
     position:absolute;left:-6px;top:50%;transform:translateY(-50%);
     width:16px;height:16px;border-radius:50%;background:var(--paper);border:1.5px solid var(--line);
   }
-  .ticket-body{padding:14px 16px 14px 18px;flex:1;}
+  .ticket-body{padding:14px 16px 14px 18px;flex:1;min-width:0;}
   .ticket-body .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
   .ticket-body .job-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Inter';}
   .ticket-body .customer{font-size:13px;color:rgba(28,30,34,0.55);margin-top:2px;}
   .ticket-body .meta-row{display:flex;gap:14px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);flex-wrap:wrap;}
   .status-tag{
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.04em;text-transform:uppercase;
-    padding:4px 9px;border-radius:20px;white-space:nowrap;
+    padding:4px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;
   }
-  .status-tag.scheduled{background:rgba(44,95,124,0.12);color:var(--blue);}
+  .status-tag.scheduled, .status-tag.sent, .status-tag.draft{background:rgba(44,95,124,0.12);color:var(--blue);}
   .status-tag.in_progress{background:rgba(217,168,0,0.15);color:var(--yellow-deep);}
-  .status-tag.completed{background:rgba(62,137,20,0.12);color:var(--green);}
-  .status-tag.invoiced{background:rgba(0,0,0,0.06);color:#5a5f68;}
+  .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.12);color:var(--green);}
+  .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);}
 
-  .empty-state{
-    text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4);
-  }
+  .empty-state{ text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4); }
   .empty-state .glyph{font-size:32px;margin-bottom:8px;}
   .empty-state p{font-size:14px;margin:0;}
 
@@ -165,6 +183,30 @@
   .helper-clock .time{font-family:'Barlow Condensed';font-size:38px;margin:6px 0 16px;}
   .helper-clock .btn-primary{max-width:220px;margin:0 auto;}
 
+  /* ---------- MODAL / SHEET ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(28,30,34,0.45);z-index:50;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .sheet{
+    background:var(--paper);width:100%;max-width:480px;border-radius:20px 20px 0 0;
+    max-height:88vh;overflow-y:auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  .sheet-handle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 16px;}
+  .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .sheet-head h2{font-size:20px;}
+  .sheet-close{background:none;border:none;font-size:22px;color:rgba(28,30,34,0.4);cursor:pointer;padding:4px;}
+  .line-item-row{display:grid;grid-template-columns:1fr 55px 75px 28px;gap:6px;margin-bottom:8px;align-items:center;}
+  .line-item-row input{padding:10px;font-size:13px;}
+  .remove-li{background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;}
+  .add-li-btn{background:none;border:1.5px dashed var(--line);border-radius:8px;padding:10px;width:100%;color:rgba(28,30,34,0.5);font-size:13px;cursor:pointer;margin-bottom:14px;}
+  .li-total{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;margin-bottom:16px;}
+  .menu-option{
+    display:flex;align-items:center;gap:12px;padding:16px;background:#fff;border:1.5px solid var(--line);
+    border-radius:12px;margin-bottom:10px;cursor:pointer;font-size:15px;font-weight:600;
+  }
+  .menu-option .ic{font-size:20px;}
+
   .hidden{display:none !important;}
   ::-webkit-scrollbar{display:none;}
 </style>
@@ -189,7 +231,7 @@
     </div>
     <button class="btn btn-primary" onclick="enterApp('owner')">Sign in as Owner</button>
     <button class="btn btn-ghost" onclick="enterApp('helper')">Sign in as Helper (demo)</button>
-    <div class="switch-role">Demo mode — no Supabase project connected yet.</div>
+    <div class="switch-role">Demo mode — data saves to this device until Supabase is connected.</div>
   </div>
 
   <!-- ===================== OWNER APP ===================== -->
@@ -205,9 +247,15 @@
     <!-- DASHBOARD -->
     <div id="ownerTab-dashboard" class="content tabpane">
       <div class="stat-row">
-        <div class="stat-card yellow"><div class="num" id="statOpenJobs">3</div><div class="label">Open Jobs</div></div>
+        <div class="stat-card yellow"><div class="num" id="statOpenJobs">0</div><div class="label">Open Jobs</div></div>
         <div class="stat-card"><div class="num mono" id="statInvoiceTotal">$0</div><div class="label">Open Invoices</div></div>
       </div>
+
+      <div class="section-head"><h2>Pulse</h2><span class="count">how it's going</span></div>
+      <div id="pulseJobs" class="pulse-card"></div>
+      <div id="pulseEstimates" class="pulse-card"></div>
+      <div id="pulseInvoices" class="pulse-card"></div>
+
       <div class="section-head"><h2>Today</h2><span class="count" id="todayCount"></span></div>
       <div id="todayList"></div>
       <div class="section-head"><h2>Up Next</h2></div>
@@ -234,7 +282,7 @@
       <div id="invoicesList"></div>
     </div>
 
-    <button class="fab" onclick="alert('Hook this up to a New Job / New Estimate sheet next.')">+</button>
+    <button class="fab" onclick="openAddMenu()">+</button>
 
     <div class="bottomnav">
       <button class="navbtn active" data-tab="dashboard" onclick="showOwnerTab('dashboard')"><span class="ic">⌂</span><span class="lb">Home</span></button>
@@ -269,105 +317,157 @@
     </div>
   </div>
 
+  <!-- ===================== MODAL ROOT ===================== -->
+  <div id="modalRoot"></div>
+
 </div>
 
 <script>
 /* ============================================================
-   DEMO DATA — swap this whole block for real Supabase queries
-   once you connect a project (see SUPABASE SETUP comment below).
+   DATA LAYER — persisted to localStorage on this device.
+   Swap this for real Supabase queries once you connect a
+   project (see SUPABASE SETUP note near the bottom).
    ============================================================ */
-const demoCustomers = [
-  {id:1, name:"Maria Gomez", phone:"(407) 555-0142", address:"1420 Lakeview Dr, Orlando FL"},
-  {id:2, name:"Tom Reyes", phone:"(407) 555-0198", address:"88 Palmetto St, Winter Park FL"},
-  {id:3, name:"Lisa Chen", phone:"(321) 555-0110", address:"305 Bay Hill Rd, Orlando FL"},
-];
-const demoJobs = [
-  {id:1, title:"Kitchen remodel", customer:"Maria Gomez", status:"in_progress", when:"Today · 9:00 AM", address:"1420 Lakeview Dr"},
-  {id:2, title:"Bathroom tile repair", customer:"Tom Reyes", status:"scheduled", when:"Today · 1:30 PM", address:"88 Palmetto St"},
-  {id:3, title:"Deck framing estimate walk", customer:"Lisa Chen", status:"scheduled", when:"Tomorrow · 10:00 AM", address:"305 Bay Hill Rd"},
-  {id:4, title:"Fence repair", customer:"Tom Reyes", status:"completed", when:"Yesterday", address:"88 Palmetto St"},
-  {id:5, title:"Cabinet install", customer:"Maria Gomez", status:"invoiced", when:"Last week", address:"1420 Lakeview Dr"},
-];
-const demoEstimates = [
-  {id:1, customer:"Lisa Chen", total:4200, status:"sent"},
-  {id:2, customer:"Maria Gomez", total:1150, status:"draft"},
-];
-const demoInvoices = [
-  {id:1, customer:"Maria Gomez", total:2800, status:"sent", due:"Sep 2"},
-];
+const STORAGE_KEY = 'ticket_app_data_v1';
+
+const seedData = {
+  customers: [
+    {id:1, name:"Maria Gomez", phone:"(407) 555-0142", email:"maria@example.com", address:"1420 Lakeview Dr, Orlando FL", notes:""},
+    {id:2, name:"Tom Reyes", phone:"(407) 555-0198", email:"", address:"88 Palmetto St, Winter Park FL", notes:""},
+    {id:3, name:"Lisa Chen", phone:"(321) 555-0110", email:"", address:"305 Bay Hill Rd, Orlando FL", notes:""},
+  ],
+  jobs: [
+    {id:1, title:"Kitchen remodel", customerId:1, status:"in_progress", when:"Today · 9:00 AM", address:"1420 Lakeview Dr", notes:""},
+    {id:2, title:"Bathroom tile repair", customerId:2, status:"scheduled", when:"Today · 1:30 PM", address:"88 Palmetto St", notes:""},
+    {id:3, title:"Deck framing estimate walk", customerId:3, status:"scheduled", when:"Tomorrow · 10:00 AM", address:"305 Bay Hill Rd", notes:""},
+    {id:4, title:"Fence repair", customerId:2, status:"completed", when:"Yesterday", address:"88 Palmetto St", notes:""},
+    {id:5, title:"Cabinet install", customerId:1, status:"invoiced", when:"Last week", address:"1420 Lakeview Dr", notes:""},
+  ],
+  estimates: [
+    {id:1, customerId:3, status:"sent", items:[{name:"Deck framing", qty:1, price:4200}]},
+    {id:2, customerId:1, status:"draft", items:[{name:"Cabinet hardware", qty:1, price:1150}]},
+  ],
+  invoices: [
+    {id:1, customerId:1, status:"sent", due:"2026-09-02", items:[{name:"Cabinet install", qty:1, price:2800}]},
+  ],
+  nextId: 100
+};
+
+let db = loadData();
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(seedData));
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+function newId(){ return db.nextId++; }
+function customerName(id){ const c=db.customers.find(c=>c.id===id); return c ? c.name : 'No customer'; }
+function itemsTotal(items){ return items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.price)||0),0); }
 
 function statusLabel(s){ return s.replace('_',' '); }
 
+/* ---------- TICKET CARD RENDERERS ---------- */
 function ticketHTML(job){
   return `
-  <div class="ticket status-${job.status}">
+  <div class="ticket status-${job.status}" onclick="openJobModal(${job.id})">
     <div class="stripe"></div>
     <div class="punch-hole"></div>
     <div class="ticket-body">
       <div class="top-row">
         <div>
           <div class="job-title">${job.title}</div>
-          <div class="customer">${job.customer}</div>
+          <div class="customer">${customerName(job.customerId)}</div>
         </div>
         <span class="status-tag ${job.status}">${statusLabel(job.status)}</span>
       </div>
       <div class="meta-row">
-        <span>🕐 ${job.when}</span>
-        <span>📍 ${job.address}</span>
+        <span>🕐 ${job.when||'Unscheduled'}</span>
+        <span>📍 ${job.address||'—'}</span>
       </div>
     </div>
   </div>`;
 }
-
 function customerHTML(c){
   return `
-  <div class="ticket status-scheduled" style="display:flex;">
+  <div class="ticket" onclick="openCustomerModal(${c.id})">
     <div class="stripe" style="background:var(--ink);"></div>
     <div class="punch-hole"></div>
     <div class="ticket-body">
       <div class="job-title">${c.name}</div>
-      <div class="meta-row"><span>☎ ${c.phone}</span></div>
-      <div class="meta-row"><span>📍 ${c.address}</span></div>
+      <div class="meta-row"><span>☎ ${c.phone||'—'}</span></div>
+      <div class="meta-row"><span>📍 ${c.address||'—'}</span></div>
     </div>
   </div>`;
 }
-
 function moneyHTML(item, kind){
-  const tag = kind==='invoice' ? item.status : item.status;
+  const total = itemsTotal(item.items);
+  const dueText = kind==='invoice' && item.due ? ' · due '+item.due : '';
   return `
-  <div class="ticket status-${item.status==='paid'?'completed':(item.status==='sent'?'scheduled':'invoiced')}">
+  <div class="ticket status-${item.status}" onclick="${kind==='invoice'?'openInvoiceModal':'openEstimateModal'}(${item.id})">
     <div class="stripe"></div>
     <div class="punch-hole"></div>
     <div class="ticket-body">
       <div class="top-row">
         <div>
-          <div class="job-title">${item.customer}</div>
-          <div class="customer mono">$${item.total.toLocaleString()}${item.due ? ' · due '+item.due : ''}</div>
+          <div class="job-title">${customerName(item.customerId)}</div>
+          <div class="customer mono">$${total.toLocaleString()}${dueText}</div>
         </div>
-        <span class="status-tag ${item.status==='paid'||item.status==='approved'?'completed':(item.status==='sent'?'scheduled':'invoiced')}">${item.status}</span>
+        <span class="status-tag ${item.status}">${item.status}</span>
       </div>
     </div>
   </div>`;
 }
 
-function renderOwner(){
-  document.getElementById('todayList').innerHTML = demoJobs.filter(j=>j.when.startsWith('Today')).map(ticketHTML).join('') || `<div class="empty-state"><div class="glyph">🛠</div><p>No jobs today. Tap + to create one.</p></div>`;
-  document.getElementById('upcomingList').innerHTML = demoJobs.filter(j=>j.when.startsWith('Tomorrow')).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
-  document.getElementById('jobsList').innerHTML = demoJobs.map(ticketHTML).join('');
-  document.getElementById('jobsCount').textContent = demoJobs.length;
-  document.getElementById('customersList').innerHTML = demoCustomers.map(customerHTML).join('');
-  document.getElementById('customersCount').textContent = demoCustomers.length;
-  document.getElementById('estimatesList').innerHTML = demoEstimates.map(e=>moneyHTML(e,'estimate')).join('');
-  document.getElementById('estimatesCount').textContent = demoEstimates.length;
-  document.getElementById('invoicesList').innerHTML = demoInvoices.map(i=>moneyHTML(i,'invoice')).join('');
-  document.getElementById('invoicesCount').textContent = demoInvoices.length;
-  document.getElementById('statOpenJobs').textContent = demoJobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced').length;
-  const openTotal = demoInvoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+i.total,0);
-  document.getElementById('statInvoiceTotal').textContent = '$'+openTotal.toLocaleString();
+/* ---------- PULSE ---------- */
+const PULSE_COLORS = {
+  scheduled:'var(--blue)', in_progress:'var(--yellow-deep)', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
+  draft:'var(--blue)', sent:'var(--yellow-deep)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
+};
+function renderPulse(elId, list, statuses, title){
+  const total = list.length;
+  const counts = statuses.map(s => ({ s, n: list.filter(x=>x.status===s).length }));
+  const segs = counts.filter(c=>c.n>0).map(c=>
+    `<div class="seg" style="width:${(c.n/total*100)||0}%;background:${PULSE_COLORS[c.s]};"></div>`
+  ).join('');
+  const legend = counts.map(c=>
+    `<div class="item"><span class="dot" style="background:${PULSE_COLORS[c.s]};"></span>${statusLabel(c.s)} · ${c.n}</div>`
+  ).join('');
+  document.getElementById(elId).innerHTML = total ? `
+    <div class="pulse-head"><h3>${title}</h3><span class="total">${total} total</span></div>
+    <div class="pulse-bar">${segs}</div>
+    <div class="pulse-legend">${legend}</div>
+  ` : `<div class="pulse-head"><h3>${title}</h3><span class="total">0</span></div><p style="font-size:13px;color:rgba(28,30,34,0.4);margin:0;">Nothing here yet.</p>`;
 }
 
+/* ---------- RENDER OWNER APP ---------- */
+function renderOwner(){
+  renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','completed','invoiced','cancelled'], 'Jobs');
+  renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
+  renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
+
+  document.getElementById('todayList').innerHTML = db.jobs.filter(j=>(j.when||'').startsWith('Today')).map(ticketHTML).join('') || `<div class="empty-state"><div class="glyph">🛠</div><p>No jobs today. Tap + to create one.</p></div>`;
+  document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>(j.when||'').startsWith('Tomorrow')).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
+
+  document.getElementById('jobsList').innerHTML = db.jobs.map(ticketHTML).join('') || emptyState('🛠','No jobs yet.');
+  document.getElementById('jobsCount').textContent = db.jobs.length;
+
+  document.getElementById('customersList').innerHTML = db.customers.map(customerHTML).join('') || emptyState('☺','No customers yet.');
+  document.getElementById('customersCount').textContent = db.customers.length;
+
+  document.getElementById('estimatesList').innerHTML = db.estimates.map(e=>moneyHTML(e,'estimate')).join('') || emptyState('📄','No estimates yet.');
+  document.getElementById('estimatesCount').textContent = db.estimates.length;
+  document.getElementById('invoicesList').innerHTML = db.invoices.map(i=>moneyHTML(i,'invoice')).join('') || emptyState('🧾','No invoices yet.');
+  document.getElementById('invoicesCount').textContent = db.invoices.length;
+
+  document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
+  const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
+  document.getElementById('statInvoiceTotal').textContent = '$'+openTotal.toLocaleString();
+}
+function emptyState(glyph, text){ return `<div class="empty-state"><div class="glyph">${glyph}</div><p>${text}</p></div>`; }
 function renderHelper(){
-  document.getElementById('helperJobsList').innerHTML = demoJobs.filter(j=>j.when.startsWith('Today')).map(ticketHTML).join('');
+  document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>(j.when||'').startsWith('Today')).map(ticketHTML).join('') || emptyState('🛠','No jobs today.');
 }
 
 function showOwnerTab(tab){
@@ -417,6 +517,183 @@ function toggleClock(){
 }
 
 /* ============================================================
+   MODALS — add / edit / delete for jobs, customers, estimates, invoices
+   ============================================================ */
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function openModal(html){ document.getElementById('modalRoot').innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><div class="sheet-handle"></div>${html}</div></div>`; }
+
+function customerOptions(selectedId){
+  return db.customers.map(c=>`<option value="${c.id}" ${c.id===selectedId?'selected':''}>${c.name}</option>`).join('');
+}
+
+function openAddMenu(){
+  openModal(`
+    <div class="sheet-head"><h2>New</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="menu-option" onclick="closeModal();openJobModal()"><span class="ic">🛠</span> New Job</div>
+    <div class="menu-option" onclick="closeModal();openCustomerModal()"><span class="ic">☺</span> New Customer</div>
+    <div class="menu-option" onclick="closeModal();openEstimateModal()"><span class="ic">📄</span> New Estimate</div>
+    <div class="menu-option" onclick="closeModal();openInvoiceModal()"><span class="ic">🧾</span> New Invoice</div>
+  `);
+}
+
+/* ---- JOB modal ---- */
+function openJobModal(id){
+  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',when:'',address:'',notes:''};
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Job':'New Job'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Job title</label><input id="f_title" value="${job.title.replace(/"/g,'&quot;')}" placeholder="Kitchen remodel"/></div>
+    <div class="field"><label>Customer</label><select id="f_customer">${customerOptions(job.customerId)}</select></div>
+    <div class="field-row">
+      <div class="field"><label>Status</label>
+        <select id="f_status">
+          ${['scheduled','in_progress','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>When</label><input id="f_when" value="${job.when||''}" placeholder="Today · 9:00 AM"/></div>
+    </div>
+    <div class="field"><label>Address</label><input id="f_address" value="${(job.address||'').replace(/"/g,'&quot;')}" placeholder="Job site address"/></div>
+    <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Scope, access notes...">${job.notes||''}</textarea></div>
+    <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteJob('+id+')">Delete Job</button>':''}
+  `);
+}
+function saveJob(id){
+  const data = {
+    title: document.getElementById('f_title').value.trim() || 'Untitled job',
+    customerId: Number(document.getElementById('f_customer').value),
+    status: document.getElementById('f_status').value,
+    when: document.getElementById('f_when').value.trim(),
+    address: document.getElementById('f_address').value.trim(),
+    notes: document.getElementById('f_notes').value.trim(),
+  };
+  if(id){ Object.assign(db.jobs.find(j=>j.id===id), data); }
+  else { db.jobs.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deleteJob(id){ db.jobs = db.jobs.filter(j=>j.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ---- CUSTOMER modal ---- */
+function openCustomerModal(id){
+  const c = id ? db.customers.find(c=>c.id===id) : {name:'',phone:'',email:'',address:'',notes:''};
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Customer':'New Customer'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Name</label><input id="f_name" value="${c.name.replace(/"/g,'&quot;')}" placeholder="Full name"/></div>
+    <div class="field-row">
+      <div class="field"><label>Phone</label><input id="f_phone" value="${c.phone||''}" placeholder="(407) 555-0100"/></div>
+      <div class="field"><label>Email</label><input id="f_email" value="${c.email||''}" placeholder="optional"/></div>
+    </div>
+    <div class="field"><label>Address</label><input id="f_caddress" value="${(c.address||'').replace(/"/g,'&quot;')}" placeholder="Street, city, state"/></div>
+    <div class="field"><label>Notes</label><textarea id="f_cnotes" placeholder="Gate code, preferences...">${c.notes||''}</textarea></div>
+    <button class="btn btn-primary" onclick="saveCustomer(${id||'null'})">Save Customer</button>
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteCustomer('+id+')">Delete Customer</button>':''}
+  `);
+}
+function saveCustomer(id){
+  const data = {
+    name: document.getElementById('f_name').value.trim() || 'Unnamed customer',
+    phone: document.getElementById('f_phone').value.trim(),
+    email: document.getElementById('f_email').value.trim(),
+    address: document.getElementById('f_caddress').value.trim(),
+    notes: document.getElementById('f_cnotes').value.trim(),
+  };
+  if(id){ Object.assign(db.customers.find(c=>c.id===id), data); }
+  else { db.customers.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deleteCustomer(id){ db.customers = db.customers.filter(c=>c.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ---- ESTIMATE / INVOICE (shared line-item UI) ---- */
+let lineItemsDraft = [];
+function lineItemRowHTML(item, idx){
+  return `
+  <div class="line-item-row">
+    <input placeholder="Item / description" value="${(item.name||'').replace(/"/g,'&quot;')}" oninput="lineItemsDraft[${idx}].name=this.value"/>
+    <input placeholder="Qty" type="number" value="${item.qty||1}" oninput="lineItemsDraft[${idx}].qty=this.value;updateLiTotal()"/>
+    <input placeholder="Price" type="number" value="${item.price||0}" oninput="lineItemsDraft[${idx}].price=this.value;updateLiTotal()"/>
+    <button class="remove-li" onclick="removeLineItem(${idx})">✕</button>
+  </div>`;
+}
+function renderLineItems(){
+  document.getElementById('lineItemsBox').innerHTML = lineItemsDraft.map(lineItemRowHTML).join('');
+  updateLiTotal();
+}
+function addLineItem(){ lineItemsDraft.push({name:'',qty:1,price:0}); renderLineItems(); }
+function removeLineItem(idx){ lineItemsDraft.splice(idx,1); renderLineItems(); }
+function updateLiTotal(){
+  const total = itemsTotal(lineItemsDraft);
+  const el = document.getElementById('liTotal');
+  if(el) el.textContent = '$'+total.toLocaleString();
+}
+
+function openEstimateModal(id){
+  const e = id ? db.estimates.find(e=>e.id===id) : {customerId:db.customers[0]?.id,status:'draft',items:[{name:'',qty:1,price:0}]};
+  lineItemsDraft = JSON.parse(JSON.stringify(e.items));
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Estimate':'New Estimate'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Customer</label><select id="f_ecustomer">${customerOptions(e.customerId)}</select></div>
+    <div class="field"><label>Status</label>
+      <select id="f_estatus">
+        ${['draft','sent','approved','declined'].map(s=>`<option value="${s}" ${s===e.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+      </select>
+    </div>
+    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
+    <div id="lineItemsBox"></div>
+    <button class="add-li-btn" onclick="addLineItem()">+ Add line item</button>
+    <div class="li-total">Total: <span id="liTotal">$0</span></div>
+    <button class="btn btn-primary" onclick="saveEstimate(${id||'null'})">Save Estimate</button>
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteEstimate('+id+')">Delete Estimate</button>':''}
+  `);
+  renderLineItems();
+}
+function saveEstimate(id){
+  const data = {
+    customerId: Number(document.getElementById('f_ecustomer').value),
+    status: document.getElementById('f_estatus').value,
+    items: lineItemsDraft.filter(i=>i.name.trim()!==''),
+  };
+  if(id){ Object.assign(db.estimates.find(e=>e.id===id), data); }
+  else { db.estimates.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deleteEstimate(id){ db.estimates = db.estimates.filter(e=>e.id!==id); saveData(); closeModal(); renderOwner(); }
+
+function openInvoiceModal(id){
+  const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}]};
+  lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Customer</label><select id="f_icustomer">${customerOptions(inv.customerId)}</select></div>
+    <div class="field-row">
+      <div class="field"><label>Status</label>
+        <select id="f_istatus">
+          ${['draft','sent','paid','overdue'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Due date</label><input id="f_due" type="date" value="${inv.due||''}"/></div>
+    </div>
+    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
+    <div id="lineItemsBox"></div>
+    <button class="add-li-btn" onclick="addLineItem()">+ Add line item</button>
+    <div class="li-total">Total: <span id="liTotal">$0</span></div>
+    <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
+  `);
+  renderLineItems();
+}
+function saveInvoice(id){
+  const data = {
+    customerId: Number(document.getElementById('f_icustomer').value),
+    status: document.getElementById('f_istatus').value,
+    due: document.getElementById('f_due').value,
+    items: lineItemsDraft.filter(i=>i.name.trim()!==''),
+  };
+  if(id){ Object.assign(db.invoices.find(i=>i.id===id), data); }
+  else { db.invoices.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ============================================================
    SUPABASE SETUP (next step, once you create the project):
 
    const supabase = window.supabase.createClient(
@@ -424,9 +701,9 @@ function toggleClock(){
      'YOUR-ANON-KEY'
    );
 
-   Then replace demoJobs/demoCustomers/etc. with real queries, e.g.:
-   const { data: jobs } = await supabase.from('jobs').select('*, customers(name), job_assignments(profile_id)');
-
+   Replace the `db` object and save/load functions above with real
+   queries, e.g.:
+     const { data } = await supabase.from('jobs').select('*, customers(name)');
    Auth: supabase.auth.signInWithPassword({email, password})
    Role comes from profiles.role — route to ownerApp or helperApp based on it.
    ============================================================ */
