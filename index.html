@@ -134,6 +134,40 @@
   .cc-money .cc-gold-num{font-family:'Barlow Condensed';font-weight:800;font-size:38px;color:var(--gold);line-height:1.1;margin-top:2px;}
   .cc-money .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);margin-top:6px;line-height:1.5;}
   .cc-money .cc-tag{color:var(--blue);margin-top:8px;display:inline-block;}
+
+  /* ---------- MONTH CALENDAR ---------- */
+  .cal-wrap{background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-hard);padding:16px;margin-bottom:22px;}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .cal-head h3{font-size:18px;}
+  .cal-nav-btn{width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;flex-shrink:0;}
+  .cal-nav-btn:active{background:var(--paper-dim);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .cal-dow{font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:center;color:rgba(28,30,34,0.4);text-transform:uppercase;padding-bottom:6px;}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;cursor:pointer;
+    border:2px solid transparent;position:relative;color:var(--ink);background:var(--paper-dim);}
+  .cal-day.empty{visibility:hidden;cursor:default;}
+  .cal-day.has-job{background:var(--orange);color:#fff;}
+  .cal-day.blocked{background:repeating-linear-gradient(45deg, var(--paper-dim), var(--paper-dim) 4px, rgba(28,30,34,0.18) 4px, rgba(28,30,34,0.18) 8px);}
+  .cal-day.today{border-color:var(--ink);}
+  .cal-day.selected{outline:2px solid var(--blue);outline-offset:1px;}
+  .cal-day:active{transform:scale(0.92);}
+  .cal-daypanel{margin-top:14px;padding-top:14px;border-top:1.5px dashed var(--line);}
+  .cal-daypanel h4{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:rgba(28,30,34,0.5);margin-bottom:10px;}
+
+  /* ---------- BREAKDOWN PAGE (bento-style percentage cards) ---------- */
+  .breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .breakdown-card{
+    border-radius:20px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;
+    border:2px solid var(--ink);box-shadow:3px 3px 0px var(--ink);
+  }
+  .breakdown-card h4{font-size:15px;font-weight:700;font-family:'Inter';}
+  .breakdown-card .bd-sub{font-size:11px;opacity:.75;margin-top:3px;font-family:'IBM Plex Mono',monospace;}
+  .breakdown-card .bd-pct{font-family:'Barlow Condensed';font-weight:800;font-size:46px;line-height:1;margin-top:18px;}
+  .bd-h1{min-height:230px;}
+  .bd-h2{min-height:165px;}
+  .bd-h3{min-height:205px;}
+  .bd-h4{min-height:145px;}
   .cc-content{grid-area:content;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;}
   .cc-content .cc-title{font-family:'Barlow Condensed';font-size:22px;font-weight:800;text-transform:uppercase;color:var(--ink);}
   .cc-content .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:5px;line-height:1.5;}
@@ -141,8 +175,9 @@
   /* ---------- PULSE (status breakdown) ---------- */
   .pulse-card{
     background:#fff;border:2px solid var(--ink);border-radius:var(--radius);padding:16px;margin-bottom:14px;
-    box-shadow:3px 3px 0px var(--ink);
+    box-shadow:3px 3px 0px var(--ink);cursor:pointer;transition:transform .06s ease, box-shadow .06s ease;
   }
+  .pulse-card:active{transform:translate(2px,2px);box-shadow:1px 1px 0px var(--ink);}
   .pulse-card .pulse-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
   .pulse-card .pulse-head h3{font-size:15px;color:var(--ink);}
   .pulse-card .pulse-head .total{font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.45);}
@@ -316,9 +351,9 @@
       </div>
 
       <div class="section-head"><h2>Pulse</h2><span class="count">how it's going</span></div>
-      <div id="pulseJobs" class="pulse-card"></div>
-      <div id="pulseEstimates" class="pulse-card"></div>
-      <div id="pulseInvoices" class="pulse-card"></div>
+      <div id="pulseJobs" class="pulse-card" onclick="openBreakdown('jobs')"></div>
+      <div id="pulseEstimates" class="pulse-card" onclick="openBreakdown('estimates')"></div>
+      <div id="pulseInvoices" class="pulse-card" onclick="openBreakdown('invoices')"></div>
 
       <div class="section-head"><h2>Today</h2><span class="count" id="todayCount"></span></div>
       <div id="todayList"></div>
@@ -354,7 +389,30 @@
         <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
         <h2 style="font-size:20px;">Agenda</h2>
       </div>
+
+      <div class="cal-wrap">
+        <div class="cal-head">
+          <button class="cal-nav-btn" onclick="calPrevMonth()">‹</button>
+          <h3 id="calMonthLabel">Month Year</h3>
+          <button class="cal-nav-btn" onclick="calNextMonth()">›</button>
+        </div>
+        <div class="cal-grid" style="margin-bottom:4px;">
+          <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div><div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-daypanel" id="calDayPanel"></div>
+      </div>
+
       <div id="agendaList"></div>
+    </div>
+
+    <!-- BREAKDOWN (percentage bento page, opened from a Pulse card) -->
+    <div id="ownerTab-breakdown" class="content tabpane hidden">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
+        <h2 style="font-size:20px;" id="breakdownTitle">Breakdown</h2>
+      </div>
+      <div class="breakdown-grid" id="breakdownGrid"></div>
     </div>
 
     <button class="fab" onclick="openAddMenu()">+</button>
@@ -404,6 +462,7 @@
    project (see SUPABASE SETUP note near the bottom).
    ============================================================ */
 const STORAGE_KEY = 'ticket_app_data_v1';
+function todayPlus(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().slice(0,10); }
 
 const seedData = {
   customers: [
@@ -412,11 +471,11 @@ const seedData = {
     {id:3, name:"Lisa Chen", phone:"(321) 555-0110", email:"", address:"305 Bay Hill Rd, Orlando FL", notes:""},
   ],
   jobs: [
-    {id:1, title:"Kitchen remodel", customerId:1, status:"in_progress", when:"Today · 9:00 AM", address:"1420 Lakeview Dr", notes:""},
-    {id:2, title:"Bathroom tile repair", customerId:2, status:"scheduled", when:"Today · 1:30 PM", address:"88 Palmetto St", notes:""},
-    {id:3, title:"Deck framing estimate walk", customerId:3, status:"scheduled", when:"Tomorrow · 10:00 AM", address:"305 Bay Hill Rd", notes:""},
-    {id:4, title:"Fence repair", customerId:2, status:"completed", when:"Yesterday", address:"88 Palmetto St", notes:""},
-    {id:5, title:"Cabinet install", customerId:1, status:"invoiced", when:"Last week", address:"1420 Lakeview Dr", notes:""},
+    {id:1, title:"Kitchen remodel", customerId:1, status:"in_progress", when:"Today · 9:00 AM", date:todayPlus(0), address:"1420 Lakeview Dr", notes:""},
+    {id:2, title:"Bathroom tile repair", customerId:2, status:"scheduled", when:"Today · 1:30 PM", date:todayPlus(0), address:"88 Palmetto St", notes:""},
+    {id:3, title:"Deck framing estimate walk", customerId:3, status:"scheduled", when:"Tomorrow · 10:00 AM", date:todayPlus(1), address:"305 Bay Hill Rd", notes:""},
+    {id:4, title:"Fence repair", customerId:2, status:"completed", when:"Yesterday", date:todayPlus(-1), address:"88 Palmetto St", notes:""},
+    {id:5, title:"Cabinet install", customerId:1, status:"invoiced", when:"Last week", date:todayPlus(-7), address:"1420 Lakeview Dr", notes:""},
   ],
   estimates: [
     {id:1, customerId:3, status:"sent", items:[{name:"Deck framing", qty:1, price:4200}]},
@@ -429,6 +488,7 @@ const seedData = {
     {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
   ],
   settings: { companyName:"407 Renovations", ownerName:"Javier" },
+  availability: [],
   nextId: 100
 };
 
@@ -440,6 +500,7 @@ function loadData(){
       const parsed = JSON.parse(raw);
       parsed.leads = parsed.leads || [];
       parsed.settings = parsed.settings || { companyName:"407 Renovations", ownerName:"Javier" };
+      parsed.availability = parsed.availability || [];
       return parsed;
     }
   }catch(e){}
@@ -587,7 +648,93 @@ function showOwnerTab(tab){
   const btn = document.querySelector(`.navbtn[data-tab="${tab}"]`);
   if(btn) btn.classList.add('active');
 }
-function openAgenda(){ renderAgenda(); showOwnerTab('agenda'); }
+function openAgenda(){ renderAgenda(); renderCalendar(); showOwnerTab('agenda'); }
+let calYear, calMonth, selectedCalDate = null;
+(function initCalendar(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); })();
+function isoDate(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function jobsOnDate(dateStr){ return db.jobs.filter(j=>j.date===dateStr); }
+const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent = MONTH_NAMES[calMonth]+' '+calYear;
+  const firstDow = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayStr = isoDate(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  let html='';
+  for(let i=0;i<firstDow;i++) html += `<div class="cal-day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = isoDate(calYear, calMonth, d);
+    const hasJob = jobsOnDate(dateStr).length>0;
+    const blocked = db.availability.includes(dateStr);
+    let cls='cal-day';
+    if(hasJob) cls+=' has-job';
+    else if(blocked) cls+=' blocked';
+    if(dateStr===todayStr) cls+=' today';
+    if(dateStr===selectedCalDate) cls+=' selected';
+    html += `<div class="${cls}" onclick="selectCalDay('${dateStr}')">${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+  renderCalDayPanel();
+}
+function calPrevMonth(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNextMonth(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+function selectCalDay(dateStr){ selectedCalDate = (selectedCalDate===dateStr) ? null : dateStr; renderCalendar(); }
+function renderCalDayPanel(){
+  const panel = document.getElementById('calDayPanel');
+  if(!selectedCalDate){ panel.innerHTML=''; return; }
+  const jobsHere = jobsOnDate(selectedCalDate);
+  const blocked = db.availability.includes(selectedCalDate);
+  let html = `<h4>${selectedCalDate}</h4>`;
+  if(jobsHere.length){
+    html += jobsHere.map(ticketHTML).join('');
+  } else {
+    html += `<p style="font-size:13px;color:rgba(28,30,34,0.5);margin:0 0 10px;">Nothing scheduled this day.</p>
+      <button class="btn ${blocked?'btn-secondary':'btn-danger'}" onclick="toggleAvailability('${selectedCalDate}')">${blocked?'Mark Available Again':'Mark Unavailable'}</button>`;
+  }
+  panel.innerHTML = html;
+}
+function toggleAvailability(dateStr){
+  if(db.availability.includes(dateStr)) db.availability = db.availability.filter(d=>d!==dateStr);
+  else db.availability.push(dateStr);
+  saveData(); renderCalendar();
+}
+/* ---------- BREAKDOWN PAGE ---------- */
+const BREAKDOWN_CONFIG = {
+  jobs: { title:'Jobs Breakdown', statuses:[
+    {key:'scheduled', label:'Scheduled', sub:'On the books', bg:'#F7F5F0', fg:'#1C1E22', h:'bd-h1'},
+    {key:'in_progress', label:'In Progress', sub:'Crew is on site', bg:'#4A7E9B', fg:'#fff', h:'bd-h2'},
+    {key:'completed', label:'Completed', sub:'Done, not billed', bg:'#1C1E22', fg:'#F5C826', h:'bd-h3'},
+    {key:'invoiced', label:'Invoiced', sub:'Billed out', bg:'#EDEAE2', fg:'#1C1E22', h:'bd-h4'},
+    {key:'cancelled', label:'Cancelled', sub:"Didn't happen", bg:'#CFE0E8', fg:'#1C1E22', h:'bd-h2'},
+  ]},
+  estimates: { title:'Estimates Breakdown', statuses:[
+    {key:'draft', label:'Draft', sub:'Not sent yet', bg:'#FBEEE0', fg:'#1C1E22', h:'bd-h1'},
+    {key:'sent', label:'Sent', sub:'Waiting on client', bg:'#FE7F2D', fg:'#fff', h:'bd-h3'},
+    {key:'approved', label:'Approved', sub:'Ready to schedule', bg:'#F5A25D', fg:'#1C1E22', h:'bd-h2'},
+    {key:'declined', label:'Declined', sub:"Didn't win it", bg:'#EDEAE2', fg:'#1C1E22', h:'bd-h4'},
+  ]},
+  invoices: { title:'Invoices Breakdown', statuses:[
+    {key:'draft', label:'Draft', sub:'Not sent yet', bg:'#FBEEE0', fg:'#1C1E22', h:'bd-h1'},
+    {key:'sent', label:'Sent', sub:'Awaiting payment', bg:'#C9A227', fg:'#fff', h:'bd-h2'},
+    {key:'paid', label:'Paid', sub:'Money in', bg:'#3E8914', fg:'#fff', h:'bd-h3'},
+    {key:'overdue', label:'Overdue', sub:'Follow up', bg:'#C1440E', fg:'#fff', h:'bd-h4'},
+  ]},
+};
+function getListForType(type){ return type==='jobs' ? db.jobs : type==='estimates' ? db.estimates : db.invoices; }
+function openBreakdown(type){ renderBreakdownPage(type); showOwnerTab('breakdown'); }
+function renderBreakdownPage(type){
+  const cfg = BREAKDOWN_CONFIG[type];
+  const list = getListForType(type);
+  const total = list.length;
+  document.getElementById('breakdownTitle').textContent = cfg.title + ' — ' + total + ' total';
+  document.getElementById('breakdownGrid').innerHTML = cfg.statuses.map(s=>{
+    const n = list.filter(x=>x.status===s.key).length;
+    return `<div class="breakdown-card ${s.h}" style="background:${s.bg};color:${s.fg};">
+      <div><h4>${s.label}</h4><div class="bd-sub">${s.sub}</div></div>
+      <div class="bd-pct">${n}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderAgenda(){
   const buckets = [['Today',[]], ['Tomorrow',[]], ['Everything else',[]]];
   db.jobs.forEach(j=>{
@@ -714,6 +861,7 @@ function openJobModal(id){
       </div>
       <div class="field"><label>When</label><input id="f_when" value="${job.when||''}" placeholder="Today · 9:00 AM"/></div>
     </div>
+    <div class="field"><label>Date (for the calendar)</label><input id="f_date" type="date" value="${job.date||''}"/></div>
     <div class="field"><label>Address</label><input id="f_address" value="${(job.address||'').replace(/"/g,'&quot;')}" placeholder="Job site address"/></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Scope, access notes...">${job.notes||''}</textarea></div>
     <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
@@ -726,6 +874,7 @@ function saveJob(id){
     customerId: Number(document.getElementById('f_customer').value),
     status: document.getElementById('f_status').value,
     when: document.getElementById('f_when').value.trim(),
+    date: document.getElementById('f_date').value,
     address: document.getElementById('f_address').value.trim(),
     notes: document.getElementById('f_notes').value.trim(),
   };
