@@ -15,12 +15,15 @@
     --paper-dim:#EDEAE2;
     --yellow:#F5C826;
     --yellow-deep:#D9A800;
+    --orange:#E85D2C;
     --blue:#2C5F7C;
     --blue-soft:#4A7E9B;
     --green:#3E8914;
     --red:#C1440E;
     --line:rgba(28,30,34,0.12);
     --radius:14px;
+    --shadow-hard:4px 4px 0px var(--ink);
+    --hazard:repeating-linear-gradient(45deg, var(--ink), var(--ink) 9px, var(--orange) 9px, var(--orange) 18px);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;}
@@ -47,10 +50,15 @@
     min-height:100vh;display:flex;flex-direction:column;justify-content:center;
     padding:32px 28px;background:var(--ink);color:var(--paper);
   }
-  .login-screen .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-  .punch{width:14px;height:14px;border-radius:50%;background:var(--paper);opacity:0.15;}
-  .login-screen h1{font-size:42px;line-height:0.95;color:var(--paper);}
-  .login-screen .tag{color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;margin-top:8px;margin-bottom:36px;text-transform:uppercase;}
+  .login-screen .brand{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .chrome-swatch{
+    width:34px;height:34px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(from 90deg, #8a8f98, #f2f2f2, #6b6f77, #ffffff, #9a9ea5, #f2f2f2, #8a8f98);
+    border:2px solid var(--ink);
+  }
+  .login-screen h1{font-size:44px;line-height:0.95;color:var(--paper);letter-spacing:0.01em;}
+  .login-screen h1 .dot{color:var(--orange);}
+  .login-screen .tag{color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;margin-top:10px;margin-bottom:36px;text-transform:uppercase;}
   .field{margin-bottom:14px;}
   .field label{display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;}
   .login-screen .field label{color:rgba(247,245,240,0.6);}
@@ -64,23 +72,24 @@
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .btn{
     display:flex;align-items:center;justify-content:center;gap:8px;
-    padding:15px 20px;border-radius:10px;border:none;font-size:15px;font-weight:600;
-    cursor:pointer;width:100%;font-family:'Inter',sans-serif;transition:transform .08s ease;
+    padding:15px 20px;border-radius:10px;border:2px solid transparent;font-size:15px;font-weight:600;
+    cursor:pointer;width:100%;font-family:'Inter',sans-serif;transition:transform .06s ease, box-shadow .06s ease;
   }
-  .btn:active{transform:scale(0.98);}
-  .btn-primary{background:var(--yellow);color:var(--ink);}
-  .btn-ghost{background:transparent;color:var(--paper);border:1.5px solid rgba(247,245,240,0.25);margin-top:10px;}
-  .btn-danger{background:transparent;color:var(--red);border:1.5px solid rgba(193,68,14,0.3);}
-  .btn-secondary{background:var(--paper-dim);color:var(--ink);}
+  .btn:active{transform:translate(2px,2px);box-shadow:none !important;}
+  .btn-primary{background:var(--yellow);color:var(--ink);border-color:var(--ink);box-shadow:var(--shadow-hard);}
+  .btn-ghost{background:transparent;color:var(--paper);border:2px solid rgba(247,245,240,0.3);margin-top:10px;}
+  .btn-danger{background:transparent;color:var(--red);border:2px solid var(--red);}
+  .btn-secondary{background:var(--paper-dim);color:var(--ink);border-color:var(--ink);box-shadow:3px 3px 0px var(--ink);}
   .switch-role{margin-top:22px;text-align:center;font-size:13px;color:rgba(247,245,240,0.5);}
 
   /* ---------- TOP BAR ---------- */
   .topbar{
     position:sticky;top:0;z-index:10;background:var(--ink);color:var(--paper);
-    padding:18px 20px 16px;display:flex;align-items:center;justify-content:space-between;
-    border-bottom:3px solid var(--yellow);
+    padding:18px 20px 15px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:5px solid transparent;border-image:var(--hazard) 5;
   }
   .topbar .co-name{font-size:22px;}
+  .topbar .co-name .dot{color:var(--orange);}
   .topbar .role-pill{
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
     background:rgba(245,200,38,0.15);color:var(--yellow);padding:4px 9px;border-radius:20px;margin-top:2px;display:inline-block;
@@ -97,18 +106,29 @@
   .section-head h2{font-size:19px;color:var(--ink);}
   .section-head .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.45);}
 
-  /* ---------- STAT ROW ---------- */
-  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .stat-card{
-    background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:16px;
+  /* ---------- COMPOSITE NAV CARD (tappable squares/rectangles) ---------- */
+  .composite-card{
+    display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto;
+    grid-template-areas:"logo logo chrome" "stripe content content";
+    gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:14px;
+    overflow:hidden;box-shadow:var(--shadow-hard);margin-bottom:4px;
   }
-  .stat-card .num{font-family:'Barlow Condensed';font-size:30px;font-weight:700;line-height:1;}
-  .stat-card .label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;opacity:.6;margin-top:6px;}
-  .stat-card.yellow{background:var(--yellow);color:var(--ink);}
+  .cc-cell{cursor:pointer;transition:filter .06s ease, transform .06s ease;}
+  .cc-cell:active{filter:brightness(0.92);}
+  .cc-logo{grid-area:logo;background:var(--paper);padding:18px 18px 16px;}
+  .cc-logo .cc-label{font-family:'Barlow Condensed';font-size:24px;font-weight:800;text-transform:uppercase;color:var(--ink);}
+  .cc-logo .cc-label .dot{color:var(--orange);}
+  .cc-logo .cc-sub{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:4px;}
+  .cc-chrome{grid-area:chrome;background:conic-gradient(from 90deg, #8a8f98, #f2f2f2, #6b6f77, #ffffff, #9a9ea5, #f2f2f2, #8a8f98);min-height:74px;}
+  .cc-stripe{grid-area:stripe;background:var(--hazard);min-height:88px;}
+  .cc-content{grid-area:content;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;}
+  .cc-content .cc-title{font-family:'Barlow Condensed';font-size:22px;font-weight:800;text-transform:uppercase;color:var(--ink);}
+  .cc-content .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:5px;line-height:1.5;}
 
   /* ---------- PULSE (status breakdown) ---------- */
   .pulse-card{
-    background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:10px;
+    background:#fff;border:2px solid var(--ink);border-radius:var(--radius);padding:16px;margin-bottom:14px;
+    box-shadow:3px 3px 0px var(--ink);
   }
   .pulse-card .pulse-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
   .pulse-card .pulse-head h3{font-size:15px;color:var(--ink);}
@@ -122,18 +142,18 @@
   /* ---------- WORK TICKET CARD ---------- */
   .ticket{
     position:relative;background:#fff;border-radius:var(--radius);
-    border:1.5px solid var(--line);margin-bottom:12px;overflow:hidden;
-    display:flex;cursor:pointer;transition:border-color .1s ease;
+    border:2px solid var(--ink);margin-bottom:14px;overflow:hidden;
+    display:flex;cursor:pointer;box-shadow:4px 4px 0px var(--ink);transition:transform .06s ease, box-shadow .06s ease;
   }
-  .ticket:active{border-color:rgba(28,30,34,0.3);}
-  .ticket .stripe{width:8px;flex-shrink:0;background:var(--blue);}
+  .ticket:active{transform:translate(2px,2px);box-shadow:1px 1px 0px var(--ink);}
+  .ticket .stripe{width:10px;flex-shrink:0;background:var(--blue);}
   .ticket.status-scheduled .stripe, .ticket.status-sent .stripe, .ticket.status-draft .stripe{background:var(--blue);}
-  .ticket.status-in_progress .stripe{background:var(--yellow-deep);}
+  .ticket.status-in_progress .stripe{background:var(--hazard);}
   .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
   .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
   .ticket .punch-hole{
-    position:absolute;left:-6px;top:50%;transform:translateY(-50%);
-    width:16px;height:16px;border-radius:50%;background:var(--paper);border:1.5px solid var(--line);
+    position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);
   }
   .ticket-body{padding:14px 16px 14px 18px;flex:1;min-width:0;}
   .ticket-body .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
@@ -142,12 +162,12 @@
   .ticket-body .meta-row{display:flex;gap:14px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);flex-wrap:wrap;}
   .status-tag{
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.04em;text-transform:uppercase;
-    padding:4px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;
+    padding:4px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;border:1.5px solid transparent;
   }
-  .status-tag.scheduled, .status-tag.sent, .status-tag.draft{background:rgba(44,95,124,0.12);color:var(--blue);}
-  .status-tag.in_progress{background:rgba(217,168,0,0.15);color:var(--yellow-deep);}
-  .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.12);color:var(--green);}
-  .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);}
+  .status-tag.scheduled, .status-tag.sent, .status-tag.draft{background:rgba(44,95,124,0.1);color:var(--blue);border-color:var(--blue);}
+  .status-tag.in_progress{background:rgba(232,93,44,0.1);color:var(--orange);border-color:var(--orange);}
+  .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.1);color:var(--green);border-color:var(--green);}
+  .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);border-color:var(--red);}
 
   .empty-state{ text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4); }
   .empty-state .glyph{font-size:32px;margin-bottom:8px;}
@@ -155,10 +175,11 @@
 
   .fab{
     position:fixed;bottom:92px;right:calc(50% - 240px + 20px);
-    width:56px;height:56px;border-radius:50%;background:var(--yellow);color:var(--ink);
-    border:none;font-size:26px;box-shadow:0 6px 18px rgba(0,0,0,0.2);cursor:pointer;
-    display:flex;align-items:center;justify-content:center;z-index:20;
+    width:58px;height:58px;border-radius:50%;background:var(--yellow);color:var(--ink);
+    border:2px solid var(--ink);font-size:26px;box-shadow:4px 4px 0px var(--ink);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;z-index:20;transition:transform .06s ease, box-shadow .06s ease;
   }
+  .fab:active{transform:translate(2px,2px);box-shadow:1px 1px 0px var(--ink);}
   @media (max-width:480px){ .fab{right:20px;} }
 
   /* ---------- BOTTOM NAV ---------- */
@@ -191,6 +212,7 @@
   .sheet{
     background:var(--paper);width:100%;max-width:480px;border-radius:20px 20px 0 0;
     max-height:88vh;overflow-y:auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom));
+    border-top:2px solid var(--ink);
   }
   .sheet-handle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 16px;}
   .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
@@ -207,6 +229,19 @@
   }
   .menu-option .ic{font-size:20px;}
 
+  /* ---------- iOS-style action sheet ---------- */
+  .action-overlay{
+    position:fixed;inset:0;background:rgba(28,30,34,0.4);z-index:50;
+    display:flex;align-items:flex-end;justify-content:center;padding:0 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  .action-wrap{width:100%;max-width:480px;}
+  .action-group{background:rgba(247,245,240,0.96);backdrop-filter:blur(10px);border-radius:14px;overflow:hidden;margin-bottom:8px;border:2px solid var(--ink);}
+  .action-title{padding:12px 16px 10px;text-align:center;font-size:12px;color:rgba(28,30,34,0.5);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--ink);}
+  .action-row{padding:16px;text-align:center;color:var(--blue);font-weight:700;font-size:17px;cursor:pointer;border-bottom:1.5px solid var(--line);}
+  .action-row:last-child{border-bottom:none;}
+  .action-row:active{background:rgba(28,30,34,0.06);}
+  .action-cancel{background:rgba(247,245,240,0.96);backdrop-filter:blur(10px);border-radius:14px;padding:16px;text-align:center;font-weight:700;font-size:17px;color:var(--ink);cursor:pointer;border:2px solid var(--ink);}
+
   .hidden{display:none !important;}
   ::-webkit-scrollbar{display:none;}
 </style>
@@ -217,8 +252,8 @@
 
   <!-- ===================== LOGIN ===================== -->
   <div id="loginScreen" class="login-screen">
-    <div class="brand"><span class="punch"></span></div>
-    <h1>TICKET</h1>
+    <div class="brand"><div class="chrome-swatch"></div></div>
+    <h1>TICKET<span class="dot">.</span></h1>
     <div class="tag">Jobs · Quotes · Invoices — one app</div>
 
     <div class="field">
@@ -238,7 +273,7 @@
   <div id="ownerApp" class="hidden">
     <div class="topbar">
       <div>
-        <div class="co-name">407 RENOVATIONS</div>
+        <div class="co-name">407 RENOVATIONS<span class="dot">.</span></div>
         <span class="role-pill">Owner</span>
       </div>
       <div style="display:flex;gap:8px;">
@@ -249,9 +284,17 @@
 
     <!-- DASHBOARD -->
     <div id="ownerTab-dashboard" class="content tabpane">
-      <div class="stat-row">
-        <div class="stat-card yellow"><div class="num" id="statOpenJobs">0</div><div class="label">Open Jobs</div></div>
-        <div class="stat-card"><div class="num mono" id="statInvoiceTotal">$0</div><div class="label">Open Invoices</div></div>
+      <div class="composite-card">
+        <div class="cc-cell cc-logo" onclick="showOwnerTab('jobs')">
+          <div class="cc-label">JOBS<span class="dot">.</span></div>
+          <div class="cc-sub mono" id="ccJobsSub">0 open</div>
+        </div>
+        <div class="cc-cell cc-chrome" onclick="openAddMenu()"></div>
+        <div class="cc-cell cc-stripe" onclick="showOwnerTab('customers')"></div>
+        <div class="cc-cell cc-content" onclick="showOwnerTab('money')">
+          <div class="cc-title">Cash Flow</div>
+          <div class="cc-desc" id="ccMoneySub">$0 open invoices</div>
+        </div>
       </div>
 
       <div class="section-head"><h2>Pulse</h2><span class="count">how it's going</span></div>
@@ -273,6 +316,8 @@
 
     <!-- CUSTOMERS -->
     <div id="ownerTab-customers" class="content tabpane hidden">
+      <div class="section-head"><h2>Leads</h2><span class="count" id="leadsCount"></span></div>
+      <div id="leadsList"></div>
       <div class="section-head"><h2>Customers</h2><span class="count" id="customersCount"></span></div>
       <div id="customersList"></div>
     </div>
@@ -353,6 +398,9 @@ const seedData = {
   invoices: [
     {id:1, customerId:1, status:"sent", due:"2026-09-02", items:[{name:"Cabinet install", qty:1, price:2800}]},
   ],
+  leads: [
+    {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
+  ],
   nextId: 100
 };
 
@@ -360,7 +408,11 @@ let db = loadData();
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      parsed.leads = parsed.leads || [];
+      return parsed;
+    }
   }catch(e){}
   return JSON.parse(JSON.stringify(seedData));
 }
@@ -401,6 +453,23 @@ function customerHTML(c){
       <div class="job-title">${c.name}</div>
       <div class="meta-row"><span>☎ ${c.phone||'—'}</span></div>
       <div class="meta-row"><span>📍 ${c.address||'—'}</span></div>
+    </div>
+  </div>`;
+}
+function leadHTML(l){
+  return `
+  <div class="ticket status-scheduled" onclick="openLeadModal(${l.id})">
+    <div class="stripe"></div>
+    <div class="punch-hole"></div>
+    <div class="ticket-body">
+      <div class="top-row">
+        <div>
+          <div class="job-title">${l.name}</div>
+          <div class="customer">${l.source||'No source'}</div>
+        </div>
+        <span class="status-tag scheduled">${l.status}</span>
+      </div>
+      <div class="meta-row"><span>☎ ${l.phone||'—'}</span></div>
     </div>
   </div>`;
 }
@@ -459,14 +528,19 @@ function renderOwner(){
   document.getElementById('customersList').innerHTML = db.customers.map(customerHTML).join('') || emptyState('☺','No customers yet.');
   document.getElementById('customersCount').textContent = db.customers.length;
 
+  document.getElementById('leadsList').innerHTML = db.leads.map(leadHTML).join('') || emptyState('📞','No leads yet.');
+  document.getElementById('leadsCount').textContent = db.leads.length;
+
   document.getElementById('estimatesList').innerHTML = db.estimates.map(e=>moneyHTML(e,'estimate')).join('') || emptyState('📄','No estimates yet.');
   document.getElementById('estimatesCount').textContent = db.estimates.length;
   document.getElementById('invoicesList').innerHTML = db.invoices.map(i=>moneyHTML(i,'invoice')).join('') || emptyState('🧾','No invoices yet.');
   document.getElementById('invoicesCount').textContent = db.invoices.length;
 
-  document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
+  document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
   const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
-  document.getElementById('statInvoiceTotal').textContent = '$'+openTotal.toLocaleString();
+  const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
+  document.getElementById('ccJobsSub').textContent = openJobsCount + ' open';
+  document.getElementById('ccMoneySub').textContent = '$'+openTotal.toLocaleString()+' open invoices · '+db.estimates.filter(e=>e.status==='sent').length+' estimates pending';
 }
 function emptyState(glyph, text){ return `<div class="empty-state"><div class="glyph">${glyph}</div><p>${text}</p></div>`; }
 function renderHelper(){
@@ -539,24 +613,31 @@ function openSettingsModal(){
 function confirmClearAll(){
   openModal(`
     <div class="sheet-head"><h2>Are you sure?</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This deletes all ${db.jobs.length} jobs, ${db.customers.length} customers, ${db.estimates.length} estimates, and ${db.invoices.length} invoices currently on this device. There's no undo.</p>
+    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This deletes all ${db.jobs.length} jobs, ${db.customers.length} customers, ${db.leads.length} leads, ${db.estimates.length} estimates, and ${db.invoices.length} invoices currently on this device. There's no undo.</p>
     <button class="btn btn-danger" onclick="clearAllData()">Yes, delete everything</button>
     <button class="btn btn-secondary" style="margin-top:10px;" onclick="openSettingsModal()">Cancel</button>
   `);
 }
 function clearAllData(){
-  db.jobs = []; db.customers = []; db.estimates = []; db.invoices = [];
+  db.jobs = []; db.customers = []; db.leads = []; db.estimates = []; db.invoices = [];
   saveData(); closeModal(); renderOwner();
 }
 
 function openAddMenu(){
-  openModal(`
-    <div class="sheet-head"><h2>New</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="menu-option" onclick="closeModal();openJobModal()"><span class="ic">🛠</span> New Job</div>
-    <div class="menu-option" onclick="closeModal();openCustomerModal()"><span class="ic">☺</span> New Customer</div>
-    <div class="menu-option" onclick="closeModal();openEstimateModal()"><span class="ic">📄</span> New Estimate</div>
-    <div class="menu-option" onclick="closeModal();openInvoiceModal()"><span class="ic">🧾</span> New Invoice</div>
-  `);
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="action-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="action-wrap">
+        <div class="action-group">
+          <div class="action-title">Create new</div>
+          <div class="action-row" onclick="closeModal();openLeadModal()">Lead</div>
+          <div class="action-row" onclick="closeModal();openJobModal()">Job</div>
+          <div class="action-row" onclick="closeModal();openEstimateModal()">Estimate</div>
+          <div class="action-row" onclick="closeModal();openInvoiceModal()">Invoice</div>
+          <div class="action-row" onclick="closeModal();openCustomerModal()">Customer</div>
+        </div>
+        <div class="action-cancel" onclick="closeModal()">Cancel</div>
+      </div>
+    </div>`;
 }
 
 /* ---- JOB modal ---- */
@@ -624,6 +705,47 @@ function saveCustomer(id){
   saveData(); closeModal(); renderOwner();
 }
 function deleteCustomer(id){ db.customers = db.customers.filter(c=>c.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ---- LEAD modal ---- */
+function openLeadModal(id){
+  const l = id ? db.leads.find(l=>l.id===id) : {name:'',phone:'',source:'',notes:'',status:'open'};
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Lead':'New Lead'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Name</label><input id="f_lname" value="${l.name.replace(/"/g,'&quot;')}" placeholder="Who's asking?"/></div>
+    <div class="field-row">
+      <div class="field"><label>Phone</label><input id="f_lphone" value="${l.phone||''}" placeholder="(407) 555-0100"/></div>
+      <div class="field"><label>Source</label><input id="f_lsource" value="${l.source||''}" placeholder="Referral, Google..."/></div>
+    </div>
+    <div class="field"><label>Status</label>
+      <select id="f_lstatus">
+        ${['open','won','lost'].map(s=>`<option value="${s}" ${s===l.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f_lnotes" placeholder="What do they need?">${l.notes||''}</textarea></div>
+    <button class="btn btn-primary" onclick="saveLead(${id||'null'})">Save Lead</button>
+    ${id?'<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertLead('+id+')">Convert to Customer</button>':''}
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteLead('+id+')">Delete Lead</button>':''}
+  `);
+}
+function saveLead(id){
+  const data = {
+    name: document.getElementById('f_lname').value.trim() || 'Unnamed lead',
+    phone: document.getElementById('f_lphone').value.trim(),
+    source: document.getElementById('f_lsource').value.trim(),
+    status: document.getElementById('f_lstatus').value,
+    notes: document.getElementById('f_lnotes').value.trim(),
+  };
+  if(id){ Object.assign(db.leads.find(l=>l.id===id), data); }
+  else { db.leads.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deleteLead(id){ db.leads = db.leads.filter(l=>l.id!==id); saveData(); closeModal(); renderOwner(); }
+function convertLead(id){
+  const l = db.leads.find(l=>l.id===id);
+  db.customers.push({id:newId(), name:l.name, phone:l.phone, email:'', address:'', notes:l.notes});
+  db.leads = db.leads.filter(x=>x.id!==id);
+  saveData(); closeModal(); renderOwner();
+}
 
 /* ---- ESTIMATE / INVOICE (shared line-item UI) ---- */
 let lineItemsDraft = [];
