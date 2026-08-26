@@ -241,7 +241,10 @@
         <div class="co-name">407 RENOVATIONS</div>
         <span class="role-pill">Owner</span>
       </div>
-      <button class="icon-btn" onclick="logout()">⎋</button>
+      <div style="display:flex;gap:8px;">
+        <button class="icon-btn" onclick="openSettingsModal()">⚙</button>
+        <button class="icon-btn" onclick="logout()">⎋</button>
+      </div>
     </div>
 
     <!-- DASHBOARD -->
@@ -524,6 +527,26 @@ function openModal(html){ document.getElementById('modalRoot').innerHTML = `<div
 
 function customerOptions(selectedId){
   return db.customers.map(c=>`<option value="${c.id}" ${c.id===selectedId?'selected':''}>${c.name}</option>`).join('');
+}
+
+function openSettingsModal(){
+  openModal(`
+    <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This wipes every job, customer, estimate, and invoice on this device so you can start clean with your own info. Can't be undone.</p>
+    <button class="btn btn-danger" onclick="confirmClearAll()">Clear All Data</button>
+  `);
+}
+function confirmClearAll(){
+  openModal(`
+    <div class="sheet-head"><h2>Are you sure?</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This deletes all ${db.jobs.length} jobs, ${db.customers.length} customers, ${db.estimates.length} estimates, and ${db.invoices.length} invoices currently on this device. There's no undo.</p>
+    <button class="btn btn-danger" onclick="clearAllData()">Yes, delete everything</button>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="openSettingsModal()">Cancel</button>
+  `);
+}
+function clearAllData(){
+  db.jobs = []; db.customers = []; db.estimates = []; db.invoices = [];
+  saveData(); closeModal(); renderOwner();
 }
 
 function openAddMenu(){
