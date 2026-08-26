@@ -273,7 +273,7 @@
   <div id="ownerApp" class="hidden">
     <div class="topbar">
       <div>
-        <div class="co-name">407 RENOVATIONS<span class="dot">.</span></div>
+        <div class="co-name" id="ownerCoName">407 RENOVATIONS<span class="dot">.</span></div>
         <span class="role-pill">Owner</span>
       </div>
       <div style="display:flex;gap:8px;">
@@ -401,6 +401,7 @@ const seedData = {
   leads: [
     {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
   ],
+  settings: { companyName:"407 Renovations", ownerName:"Javier" },
   nextId: 100
 };
 
@@ -411,6 +412,7 @@ function loadData(){
     if(raw){
       const parsed = JSON.parse(raw);
       parsed.leads = parsed.leads || [];
+      parsed.settings = parsed.settings || { companyName:"407 Renovations", ownerName:"Javier" };
       return parsed;
     }
   }catch(e){}
@@ -515,6 +517,7 @@ function renderPulse(elId, list, statuses, title){
 
 /* ---------- RENDER OWNER APP ---------- */
 function renderOwner(){
+  document.getElementById('ownerCoName').innerHTML = (db.settings.companyName||'MY COMPANY').toUpperCase() + '<span class="dot">.</span>';
   renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','completed','invoiced','cancelled'], 'Jobs');
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
   renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
@@ -606,9 +609,18 @@ function customerOptions(selectedId){
 function openSettingsModal(){
   openModal(`
     <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Company name</label><input id="f_companyName" value="${(db.settings.companyName||'').replace(/"/g,'&quot;')}" placeholder="407 Renovations"/></div>
+    <div class="field"><label>Owner name</label><input id="f_ownerName" value="${(db.settings.ownerName||'').replace(/"/g,'&quot;')}" placeholder="Your name"/></div>
+    <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
     <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This wipes every job, customer, estimate, and invoice on this device so you can start clean with your own info. Can't be undone.</p>
     <button class="btn btn-danger" onclick="confirmClearAll()">Clear All Data</button>
   `);
+}
+function saveSettings(){
+  db.settings.companyName = document.getElementById('f_companyName').value.trim() || '407 Renovations';
+  db.settings.ownerName = document.getElementById('f_ownerName').value.trim();
+  saveData(); closeModal(); renderOwner();
 }
 function confirmClearAll(){
   openModal(`
