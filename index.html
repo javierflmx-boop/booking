@@ -946,6 +946,7 @@ function openJobModal(id, presetDate){
     </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertJobToInvoice(${id})">Create Invoice from this Job</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteJob('+id+')">Delete Job</button>':''}
   `);
   renderLineItems();
@@ -1104,6 +1105,7 @@ function openEstimateModal(id, presetDate){
     </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveEstimate(${id||'null'})">Save Estimate</button>
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertEstimateToInvoice(${id})">Convert to Invoice</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteEstimate('+id+')">Delete Estimate</button>':''}
   `);
   renderLineItems();
@@ -1124,8 +1126,11 @@ function deleteEstimate(id){ db.estimates = db.estimates.filter(e=>e.id!==id); s
 function openInvoiceModal(id){
   const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}]};
   lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
+  const sourceNote = inv.jobId ? `Created from job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
+    : inv.estimateId ? `Created from an estimate` : '';
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    ${sourceNote?`<p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">${sourceNote}</p>`:''}
     <div class="field"><label>Customer</label><select id="f_icustomer">${customerOptions(inv.customerId)}</select></div>
     <div class="field-row">
       <div class="field"><label>Status</label>
@@ -1143,6 +1148,7 @@ function openInvoiceModal(id){
     </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send to Customer</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
   `);
   renderLineItems();
@@ -1159,6 +1165,47 @@ function saveInvoice(id){
   saveData(); closeModal(); renderOwner();
 }
 function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
+
+function convertJobToInvoice(jobId){
+  const job = db.jobs.find(j=>j.id===jobId);
+  const newInv = {
+    id:newId(), customerId:job.customerId, status:'sent', due:'',
+    items: JSON.parse(JSON.stringify(job.items||[])), jobId: job.id,
+  };
+  db.invoices.push(newInv);
+  job.status = 'invoiced';
+  saveData();
+  closeModal();
+  renderOwner();
+  openInvoiceModal(newInv.id);
+}
+function convertEstimateToInvoice(estimateId){
+  const est = db.estimates.find(e=>e.id===estimateId);
+  const newInv = {
+    id:newId(), customerId:est.customerId, status:'sent', due:'',
+    items: JSON.parse(JSON.stringify(est.items||[])), estimateId: est.id,
+  };
+  db.invoices.push(newInv);
+  est.status = 'approved';
+  saveData();
+  closeModal();
+  renderOwner();
+  openInvoiceModal(newInv.id);
+}
+function sendInvoiceEmail(id){
+  const inv = db.invoices.find(i=>i.id===id);
+  const cust = db.customers.find(c=>c.id===inv.customerId);
+  const total = itemsTotal(inv.items);
+  const lines = inv.items.map(i=>`- ${i.name} x${i.qty}: $${(i.qty*i.price).toLocaleString()}`).join('%0D%0A');
+  const subject = encodeURIComponent(`Invoice from ${db.settings.companyName||'us'}`);
+  const body = `Hi ${cust?cust.name:''},%0D%0A%0D%0AHere is your invoice:%0D%0A%0D%0A${lines}%0D%0A%0D%0ATotal: $${total.toLocaleString()}%0D%0A%0D%0AThanks,%0D%0A${db.settings.ownerName||db.settings.companyName||''}`;
+  if(!cust || !cust.email){
+    alert('This customer has no email on file yet. Add one in Customers, then try again.');
+    return;
+  }
+  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
+  if(inv.status==='draft'){ inv.status='sent'; saveData(); renderOwner(); }
+}
 
 /* ---- PRICE BOOK modal ---- */
 function openPriceItemModal(id){
