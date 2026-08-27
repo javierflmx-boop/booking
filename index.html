@@ -573,6 +573,37 @@ function ticketHTML(job){
     </div>
   </div>`;
 }
+function helperTicketHTML(job){
+  const canStart = job.status==='scheduled';
+  const canComplete = job.status==='in_progress';
+  return `
+  <div class="ticket status-${job.status}">
+    <div class="stripe"></div>
+    <div class="punch-hole"></div>
+    <div class="ticket-body">
+      <div class="top-row">
+        <div>
+          <div class="job-title">${job.title}</div>
+          <div class="customer">${customerName(job.customerId)}</div>
+        </div>
+        <span class="status-tag ${job.status}">${statusLabel(job.status)}</span>
+      </div>
+      <div class="meta-row">
+        <span>🕐 ${formatWhen(job.date, job.time)}</span>
+        <span>📍 ${job.address||'—'}</span>
+      </div>
+      ${job.notes?`<div class="meta-row" style="margin-top:6px;"><span style="font-family:'Inter';font-size:12.5px;color:rgba(28,30,34,0.6);">${job.notes}</span></div>`:''}
+      ${canStart||canComplete?`<div style="display:flex;gap:8px;margin-top:12px;">
+        ${canStart?`<button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'in_progress')">Start Job</button>`:''}
+        ${canComplete?`<button class="btn btn-secondary" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'completed')">Mark Complete</button>`:''}
+      </div>`:''}
+    </div>
+  </div>`;
+}
+function helperSetJobStatus(jobId, status){
+  const job = db.jobs.find(j=>j.id===jobId);
+  if(job){ job.status = status; saveData(); renderHelper(); }
+}
 function customerHTML(c){
   return `
   <div class="ticket" onclick="openCustomerModal(${c.id})">
@@ -695,7 +726,7 @@ function renderOwner(){
 }
 function emptyState(glyph, text){ return `<div class="empty-state"><p>${text}</p></div>`; }
 function renderHelper(){
-  document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || emptyState('🛠','No jobs today.');
+  document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(helperTicketHTML).join('') || emptyState('🛠','No jobs today.');
 }
 
 function showOwnerTab(tab){
