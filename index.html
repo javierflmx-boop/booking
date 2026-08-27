@@ -473,6 +473,15 @@
    ============================================================ */
 const STORAGE_KEY = 'ticket_app_data_v1';
 function todayPlus(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().slice(0,10); }
+function formatWhen(dateStr, timeStr){
+  if(!dateStr) return timeStr || 'Unscheduled';
+  let label;
+  if(dateStr===todayPlus(0)) label='Today';
+  else if(dateStr===todayPlus(1)) label='Tomorrow';
+  else if(dateStr===todayPlus(-1)) label='Yesterday';
+  else label = new Date(dateStr+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return timeStr ? `${label} · ${timeStr}` : label;
+}
 
 const seedData = {
   customers: [
@@ -481,11 +490,11 @@ const seedData = {
     {id:3, name:"Lisa Chen", phone:"(321) 555-0110", email:"", address:"305 Bay Hill Rd, Orlando FL", notes:""},
   ],
   jobs: [
-    {id:1, title:"Kitchen remodel", customerId:1, status:"in_progress", when:"Today · 9:00 AM", date:todayPlus(0), address:"1420 Lakeview Dr", notes:""},
-    {id:2, title:"Bathroom tile repair", customerId:2, status:"scheduled", when:"Today · 1:30 PM", date:todayPlus(0), address:"88 Palmetto St", notes:""},
-    {id:3, title:"Deck framing estimate walk", customerId:3, status:"scheduled", when:"Tomorrow · 10:00 AM", date:todayPlus(1), address:"305 Bay Hill Rd", notes:""},
-    {id:4, title:"Fence repair", customerId:2, status:"completed", when:"Yesterday", date:todayPlus(-1), address:"88 Palmetto St", notes:""},
-    {id:5, title:"Cabinet install", customerId:1, status:"invoiced", when:"Last week", date:todayPlus(-7), address:"1420 Lakeview Dr", notes:""},
+    {id:1, title:"Kitchen remodel", customerId:1, status:"in_progress", time:"9:00 AM", date:todayPlus(0), address:"1420 Lakeview Dr", notes:""},
+    {id:2, title:"Bathroom tile repair", customerId:2, status:"scheduled", time:"1:30 PM", date:todayPlus(0), address:"88 Palmetto St", notes:""},
+    {id:3, title:"Deck framing estimate walk", customerId:3, status:"scheduled", time:"10:00 AM", date:todayPlus(1), address:"305 Bay Hill Rd", notes:""},
+    {id:4, title:"Fence repair", customerId:2, status:"completed", time:"", date:todayPlus(-1), address:"88 Palmetto St", notes:""},
+    {id:5, title:"Cabinet install", customerId:1, status:"invoiced", time:"", date:todayPlus(-7), address:"1420 Lakeview Dr", notes:""},
   ],
   estimates: [
     {id:1, customerId:3, status:"sent", items:[{name:"Deck framing", qty:1, price:4200}]},
@@ -550,7 +559,7 @@ function ticketHTML(job){
         <span class="status-tag ${job.status}">${statusLabel(job.status)}</span>
       </div>
       <div class="meta-row">
-        <span>🕐 ${job.when||'Unscheduled'}</span>
+        <span>🕐 ${formatWhen(job.date, job.time)}</span>
         <span>📍 ${job.address||'—'}</span>
         ${job.items && job.items.length ? `<span class="mono">$${itemsTotal(job.items).toLocaleString()}</span>` : ''}
       </div>
@@ -647,8 +656,8 @@ function renderOwner(){
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
   renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
 
-  document.getElementById('todayList').innerHTML = db.jobs.filter(j=>(j.when||'').startsWith('Today')).map(ticketHTML).join('') || `<div class="empty-state"><div class="glyph">🛠</div><p>No jobs today. Tap + to create one.</p></div>`;
-  document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>(j.when||'').startsWith('Tomorrow')).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
+  document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><div class="glyph">🛠</div><p>No jobs today. Tap + to create one.</p></div>`;
+  document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(1)).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
 
   document.getElementById('jobsList').innerHTML = db.jobs.map(ticketHTML).join('') || emptyState('🛠','No jobs yet.');
   document.getElementById('jobsCount').textContent = db.jobs.length;
@@ -678,7 +687,7 @@ function renderOwner(){
 }
 function emptyState(glyph, text){ return `<div class="empty-state"><div class="glyph">${glyph}</div><p>${text}</p></div>`; }
 function renderHelper(){
-  document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>(j.when||'').startsWith('Today')).map(ticketHTML).join('') || emptyState('🛠','No jobs today.');
+  document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || emptyState('🛠','No jobs today.');
 }
 
 function showOwnerTab(tab){
@@ -787,9 +796,8 @@ function renderBreakdownPage(type){
 function renderAgenda(){
   const buckets = [['Today',[]], ['Tomorrow',[]], ['Everything else',[]]];
   db.jobs.forEach(j=>{
-    const w = j.when||'';
-    if(w.startsWith('Today')) buckets[0][1].push(j);
-    else if(w.startsWith('Tomorrow')) buckets[1][1].push(j);
+    if(j.date===todayPlus(0)) buckets[0][1].push(j);
+    else if(j.date===todayPlus(1)) buckets[1][1].push(j);
     else buckets[2][1].push(j);
   });
   let html='';
@@ -898,7 +906,7 @@ function openAddMenu(){
 
 /* ---- JOB modal ---- */
 function openJobModal(id){
-  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',when:'',address:'',notes:'',items:[]};
+  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',time:'',date:todayPlus(0),address:'',notes:'',items:[]};
   lineItemsDraft = JSON.parse(JSON.stringify(job.items||[]));
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Job':'New Job'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
@@ -910,9 +918,9 @@ function openJobModal(id){
           ${['scheduled','in_progress','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
         </select>
       </div>
-      <div class="field"><label>When</label><input id="f_when" value="${job.when||''}" placeholder="Today · 9:00 AM"/></div>
+      <div class="field"><label>Date</label><input id="f_date" type="date" value="${job.date||todayPlus(0)}"/></div>
     </div>
-    <div class="field"><label>Date (for the calendar)</label><input id="f_date" type="date" value="${job.date||''}"/></div>
+    <div class="field"><label>Time (optional)</label><input id="f_time" value="${job.time||''}" placeholder="9:00 AM"/></div>
     <div class="field"><label>Address</label><input id="f_address" value="${(job.address||'').replace(/"/g,'&quot;')}" placeholder="Job site address"/></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Scope, access notes...">${job.notes||''}</textarea></div>
     <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Cost / items (optional)</label>
@@ -932,8 +940,8 @@ function saveJob(id){
     title: document.getElementById('f_title').value.trim() || 'Untitled job',
     customerId: Number(document.getElementById('f_customer').value),
     status: document.getElementById('f_status').value,
-    when: document.getElementById('f_when').value.trim(),
-    date: document.getElementById('f_date').value,
+    date: document.getElementById('f_date').value || todayPlus(0),
+    time: document.getElementById('f_time').value.trim(),
     address: document.getElementById('f_address').value.trim(),
     notes: document.getElementById('f_notes').value.trim(),
     items: lineItemsDraft.filter(i=>i.name.trim()!==''),
