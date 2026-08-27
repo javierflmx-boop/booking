@@ -100,6 +100,12 @@
     width:38px;height:38px;border-radius:50%;background:rgba(247,245,240,0.1);border:none;
     color:var(--paper);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
+  .topbar-btn{
+    background:none;border:none;color:var(--paper);opacity:0.75;cursor:pointer;
+    font-family:'Barlow Condensed',sans-serif;font-weight:500;font-size:15px;
+    text-transform:uppercase;letter-spacing:.01em;padding:6px 4px;
+  }
+  .topbar-btn:active{opacity:1;}
 
   /* ---------- CONTENT ---------- */
   .content{padding:18px 18px 8px;}
@@ -321,9 +327,9 @@
       <div>
         <div class="co-name brand-font" id="ownerCoName">407 RENOVATIONS<span class="dot">.</span></div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <button class="icon-btn" onclick="openSettingsModal()">⚙</button>
-        <button class="icon-btn" onclick="logout()">⎋</button>
+      <div style="display:flex;gap:14px;">
+        <button class="topbar-btn" onclick="openSettingsModal()">Settings</button>
+        <button class="topbar-btn" onclick="logout()">Log Out</button>
       </div>
     </div>
 
@@ -442,7 +448,7 @@
       <div>
         <div class="co-name brand-font">MY JOBS</div>
       </div>
-      <button class="icon-btn" onclick="logout()">⎋</button>
+      <button class="topbar-btn" onclick="logout()">Log Out</button>
     </div>
     <div class="content">
       <div class="helper-clock">
@@ -657,7 +663,7 @@ function renderOwner(){
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
   renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
 
-  document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><div class="glyph">🛠</div><p>No jobs today. Tap + to create one.</p></div>`;
+  document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><p>No jobs today. Tap + to create one.</p></div>`;
   document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(1)).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
 
   document.getElementById('jobsList').innerHTML = db.jobs.map(ticketHTML).join('') || emptyState('🛠','No jobs yet.');
@@ -687,7 +693,7 @@ function renderOwner(){
   renderAgenda();
   if(document.getElementById('calGrid')) renderCalendar();
 }
-function emptyState(glyph, text){ return `<div class="empty-state"><div class="glyph">${glyph}</div><p>${text}</p></div>`; }
+function emptyState(glyph, text){ return `<div class="empty-state"><p>${text}</p></div>`; }
 function renderHelper(){
   document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || emptyState('🛠','No jobs today.');
 }
