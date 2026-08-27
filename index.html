@@ -319,7 +319,8 @@
       <input id="loginPassword" type="password" placeholder="••••••••"/>
     </div>
     <button class="btn btn-primary" onclick="enterApp('owner')">Sign in as Owner</button>
-    <button class="btn btn-ghost" onclick="enterApp('helper')">Sign in as Helper (demo)</button>
+    <div class="field" style="margin-top:14px;"><select id="loginHelperSelect"></select></div>
+    <button class="btn btn-ghost" onclick="enterApp('helper')">Sign in as Helper</button>
     <div class="switch-role">Demo mode — data saves to this device until Supabase is connected.</div>
   </div>
 
@@ -449,10 +450,12 @@
     <div class="topbar">
       <div>
         <div class="co-name brand-font">MY JOBS</div>
+        <div id="helperNameTag" class="mono" style="font-size:11px;opacity:0.6;margin-top:2px;letter-spacing:.04em;text-transform:uppercase;"></div>
       </div>
       <button class="topbar-btn" onclick="logout()">Log Out</button>
     </div>
-    <div class="content">
+
+    <div id="helperTab-today" class="content">
       <div class="helper-clock">
         <div class="status" id="clockStatus">Clocked Out</div>
         <div class="time" id="clockTime">--:--</div>
@@ -461,12 +464,24 @@
       <div class="section-head"><h2>Today's Jobs</h2></div>
       <div id="helperJobsList"></div>
     </div>
+
+    <div id="helperTab-photos" class="content hidden">
+      <div class="section-head"><h2>Photos</h2><span class="count">today's jobs</span></div>
+      <div id="helperPhotosList"></div>
+    </div>
+
+    <div id="helperTab-profile" class="content hidden">
+      <div class="section-head"><h2>Profile</h2></div>
+      <div id="helperProfileBox"></div>
+    </div>
+
     <div class="bottomnav">
-      <button class="navbtn active"><span class="lb">Today</span></button>
-      <button class="navbtn"><span class="lb">Photos</span></button>
-      <button class="navbtn"><span class="lb">Profile</span></button>
+      <button class="navbtn active" data-htab="today" onclick="showHelperTab('today')"><span class="lb">Today</span></button>
+      <button class="navbtn" data-htab="photos" onclick="showHelperTab('photos')"><span class="lb">Photos</span></button>
+      <button class="navbtn" data-htab="profile" onclick="showHelperTab('profile')"><span class="lb">Profile</span></button>
     </div>
   </div>
+  <input type="file" id="helperPhotoInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelected(event)"/>
 
   <!-- ===================== MODAL ROOT ===================== -->
   <div id="modalRoot"></div>
@@ -523,11 +538,7 @@ const seedData = {
   ],
   settings: { companyName:"407 Renovations", ownerName:"Javier" },
   availability: [],
-  priceBook: [
-    {id:1, name:"Tile installation", unit:"sq ft", price:8},
-    {id:2, name:"Stair rebuild", unit:"each", price:450},
-    {id:3, name:"Cabinet install", unit:"each", price:220},
-  ],
+  helpers: [],
   nextId: 100
 };
 
@@ -541,6 +552,7 @@ function loadData(){
       parsed.settings = parsed.settings || { companyName:"407 Renovations", ownerName:"Javier" };
       parsed.availability = parsed.availability || [];
       parsed.priceBook = parsed.priceBook || [];
+      parsed.helpers = parsed.helpers || [];
       return parsed;
     }
   }catch(e){}
@@ -570,6 +582,7 @@ function ticketHTML(job){
       <div class="meta-row">
         <span>🕐 ${formatWhen(job.date, job.time)}</span>
         <span>📍 ${job.address||'—'}</span>
+        ${helperName(job.helperId)?`<span>👤 ${helperName(job.helperId)}</span>`:''}
         ${job.items && job.items.length ? `<span class="mono">$${itemsTotal(job.items).toLocaleString()}</span>` : ''}
       </div>
     </div>
@@ -731,8 +744,75 @@ function renderOwner(){
   if(document.getElementById('calGrid')) renderCalendar();
 }
 function emptyState(glyph, text){ return `<div class="empty-state"><p>${text}</p></div>`; }
+function myHelperJobsToday(){
+  return db.jobs.filter(j=>j.date===todayPlus(0) && (j.helperId===currentHelperId || !j.helperId));
+}
 function renderHelper(){
-  document.getElementById('helperJobsList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(helperTicketHTML).join('') || emptyState('🛠','No jobs today.');
+  const name = helperName(currentHelperId);
+  document.getElementById('helperNameTag').textContent = name ? name : 'Unassigned helper';
+  document.getElementById('helperJobsList').innerHTML = myHelperJobsToday().map(helperTicketHTML).join('') || emptyState('🛠','No jobs today.');
+  renderHelperPhotosTab();
+  renderHelperProfileTab();
+}
+function showHelperTab(tab){
+  document.getElementById('helperTab-today').classList.toggle('hidden', tab!=='today');
+  document.getElementById('helperTab-photos').classList.toggle('hidden', tab!=='photos');
+  document.getElementById('helperTab-profile').classList.toggle('hidden', tab!=='profile');
+  document.querySelectorAll('#helperApp .navbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#helperApp .navbtn[data-htab="${tab}"]`).classList.add('active');
+  if(tab==='photos') renderHelperPhotosTab();
+  if(tab==='profile') renderHelperProfileTab();
+}
+function renderHelperPhotosTab(){
+  const box = document.getElementById('helperPhotosList');
+  if(!box) return;
+  const jobs = myHelperJobsToday();
+  if(jobs.length===0){ box.innerHTML = emptyState('','No jobs today to attach photos to.'); return; }
+  box.innerHTML = jobs.map(job=>{
+    const photos = job.fieldPhotos||[];
+    return `
+    <div class="pulse-card">
+      <div class="pulse-head"><h3>${job.title}</h3><span class="total">${photos.length} photo${photos.length===1?'':'s'}</span></div>
+      ${photos.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+        ${photos.map(p=>`<img src="${p.dataUrl}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1.5px solid var(--ink);"/>`).join('')}
+      </div>`:''}
+      <button class="btn btn-secondary" onclick="triggerPhotoCapture(${job.id})">+ Add Photo</button>
+    </div>`;
+  }).join('');
+}
+let pendingPhotoJobId = null;
+function triggerPhotoCapture(jobId){ pendingPhotoJobId = jobId; document.getElementById('helperPhotoInput').click(); }
+function handlePhotoSelected(event){
+  const file = event.target.files[0];
+  if(!file || !pendingPhotoJobId) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const job = db.jobs.find(j=>j.id===pendingPhotoJobId);
+    if(job){
+      job.fieldPhotos = job.fieldPhotos || [];
+      job.fieldPhotos.push({id:newId(), dataUrl:e.target.result, at:new Date().toISOString()});
+      saveData();
+      renderHelperPhotosTab();
+    }
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+function renderHelperProfileTab(){
+  const box = document.getElementById('helperProfileBox');
+  if(!box) return;
+  const name = helperName(currentHelperId) || 'Unassigned helper';
+  const jobsToday = myHelperJobsToday().length;
+  box.innerHTML = `
+    <div class="pulse-card">
+      <div style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:28px;text-transform:uppercase;">${name}</div>
+      <div class="mono" style="font-size:12px;color:rgba(28,30,34,0.5);margin-top:6px;">${jobsToday} job${jobsToday===1?'':'s'} today</div>
+    </div>
+    <div class="pulse-card">
+      <div class="pulse-head"><h3>Reports to</h3></div>
+      <div style="font-size:16px;font-weight:600;">${db.settings.ownerName || db.settings.companyName || '—'}</div>
+      <div class="mono" style="font-size:12px;color:rgba(28,30,34,0.5);margin-top:4px;">${db.settings.companyName||''}</div>
+    </div>`;
 }
 
 function showOwnerTab(tab){
@@ -861,13 +941,21 @@ function renderAgenda(){
   document.getElementById('agendaList').innerHTML = html || emptyState('📅','Nothing scheduled yet.');
 }
 
+let currentHelperId = null;
+function refreshLoginHelperOptions(){
+  const sel = document.getElementById('loginHelperSelect');
+  sel.innerHTML = db.helpers.length ? db.helpers.map(h=>`<option value="${h.id}">${h.name}</option>`).join('') : '<option value="">No helpers added yet</option>';
+}
 function enterApp(role){
   document.getElementById('loginScreen').classList.add('hidden');
   if(role==='owner'){
     document.getElementById('ownerApp').classList.remove('hidden');
     renderOwner();
   } else {
+    const sel = document.getElementById('loginHelperSelect');
+    currentHelperId = sel.value ? Number(sel.value) : null;
     document.getElementById('helperApp').classList.remove('hidden');
+    showHelperTab('today');
     renderHelper();
   }
 }
@@ -875,7 +963,10 @@ function logout(){
   document.getElementById('ownerApp').classList.add('hidden');
   document.getElementById('helperApp').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
+  currentHelperId = null;
+  refreshLoginHelperOptions();
 }
+refreshLoginHelperOptions();
 
 let clockedIn=false, clockStart=null, clockTimer=null;
 function toggleClock(){
@@ -909,6 +1000,11 @@ function openModal(html){ document.getElementById('modalRoot').innerHTML = `<div
 function customerOptions(selectedId){
   return db.customers.map(c=>`<option value="${c.id}" ${c.id===selectedId?'selected':''}>${c.name}</option>`).join('');
 }
+function helperOptions(selectedId){
+  return `<option value="" ${!selectedId?'selected':''}>Unassigned</option>` +
+    db.helpers.map(h=>`<option value="${h.id}" ${h.id===selectedId?'selected':''}>${h.name}</option>`).join('');
+}
+function helperName(id){ const h=db.helpers.find(h=>h.id===id); return h ? h.name : null; }
 
 function openSettingsModal(){
   openModal(`
@@ -917,9 +1013,42 @@ function openSettingsModal(){
     <div class="field"><label>Owner name</label><input id="f_ownerName" value="${(db.settings.ownerName||'').replace(/"/g,'&quot;')}" placeholder="Your name"/></div>
     <button class="btn btn-primary" onclick="saveSettings()">Save</button>
     <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
+    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:10px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Helpers</label>
+    <div id="helpersList">${helpersListHTML()}</div>
+    <div class="field-row" style="margin-top:4px;">
+      <div class="field"><input id="f_newHelperName" placeholder="Helper's name"/></div>
+      <div class="field"><input id="f_newHelperPhone" placeholder="Phone (optional)"/></div>
+    </div>
+    <button class="btn btn-secondary" onclick="addHelper()">+ Add Helper</button>
+    <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
     <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This wipes every job, customer, estimate, and invoice on this device so you can start clean with your own info. Can't be undone.</p>
     <button class="btn btn-danger" onclick="confirmClearAll()">Clear All Data</button>
   `);
+}
+function helpersListHTML(){
+  if(db.helpers.length===0) return `<p style="font-size:13px;color:rgba(28,30,34,0.45);margin:0 0 12px;">No helpers added yet.</p>`;
+  return db.helpers.map(h=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
+      <div><strong style="font-size:14px;">${h.name}</strong>${h.phone?`<div class="mono" style="font-size:11px;color:rgba(28,30,34,0.5);">${h.phone}</div>`:''}</div>
+      <button style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;" onclick="removeHelper(${h.id})">✕</button>
+    </div>`).join('');
+}
+function addHelper(){
+  const name = document.getElementById('f_newHelperName').value.trim();
+  if(!name) return;
+  const phone = document.getElementById('f_newHelperPhone').value.trim();
+  db.helpers.push({id:newId(), name, phone});
+  saveData();
+  document.getElementById('helpersList').innerHTML = helpersListHTML();
+  document.getElementById('f_newHelperName').value='';
+  document.getElementById('f_newHelperPhone').value='';
+}
+function removeHelper(id){
+  db.helpers = db.helpers.filter(h=>h.id!==id);
+  db.jobs.forEach(j=>{ if(j.helperId===id) j.helperId=null; });
+  saveData();
+  document.getElementById('helpersList').innerHTML = helpersListHTML();
+  renderOwner();
 }
 function saveSettings(){
   db.settings.companyName = document.getElementById('f_companyName').value.trim() || '407 Renovations';
@@ -965,6 +1094,7 @@ function openJobModal(id, presetDate){
     <div class="sheet-head"><h2>${id?'Edit Job':'New Job'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Job title</label><input id="f_title" value="${job.title.replace(/"/g,'&quot;')}" placeholder="Kitchen remodel"/></div>
     <div class="field"><label>Customer</label><select id="f_customer">${customerOptions(job.customerId)}</select></div>
+    <div class="field"><label>Assigned to</label><select id="f_helper">${helperOptions(job.helperId)}</select></div>
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_status">
@@ -993,6 +1123,7 @@ function saveJob(id){
   const data = {
     title: document.getElementById('f_title').value.trim() || 'Untitled job',
     customerId: Number(document.getElementById('f_customer').value),
+    helperId: document.getElementById('f_helper').value ? Number(document.getElementById('f_helper').value) : null,
     status: document.getElementById('f_status').value,
     date: document.getElementById('f_date').value || todayPlus(0),
     time: document.getElementById('f_time').value.trim(),
