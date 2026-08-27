@@ -51,7 +51,7 @@
   /* ---------- LOGIN ---------- */
   .login-screen{
     min-height:100vh;display:flex;flex-direction:column;justify-content:center;
-    padding:32px 28px;background:var(--ink);color:var(--paper);
+    padding:32px 28px;background:var(--charcoal);color:var(--paper);
   }
   .login-screen .brand{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
   .chrome-swatch{
@@ -61,7 +61,7 @@
   }
   .login-screen h1{font-size:42px;line-height:1;color:var(--paper);}
   .login-screen h1 .dot{color:var(--orange);}
-  .login-screen .tag{color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;margin-top:10px;margin-bottom:36px;text-transform:uppercase;}
+  .login-screen .tag{color:var(--paper);font-family:'Questrial',sans-serif;font-size:19px;letter-spacing:0.01em;margin-bottom:36px;text-transform:none;opacity:0.92;}
   .field{margin-bottom:14px;}
   .field label{display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;}
   .login-screen .field label{color:rgba(247,245,240,0.6);}
@@ -79,7 +79,7 @@
     cursor:pointer;width:100%;font-family:'Inter',sans-serif;transition:transform .06s ease, box-shadow .06s ease;
   }
   .btn:active{transform:translate(2px,2px);box-shadow:none !important;}
-  .btn-primary{background:var(--yellow);color:var(--ink);border-color:var(--ink);box-shadow:var(--shadow-hard);}
+  .btn-primary{background:var(--orange);color:#fff;border-color:var(--ink);box-shadow:var(--shadow-hard);}
   .btn-ghost{background:transparent;color:var(--paper);border:2px solid rgba(247,245,240,0.3);margin-top:10px;}
   .btn-danger{background:transparent;color:var(--red);border:2px solid var(--red);}
   .btn-secondary{background:var(--paper-dim);color:var(--ink);border-color:var(--ink);box-shadow:3px 3px 0px var(--ink);}
@@ -95,7 +95,7 @@
   .topbar .co-name .dot{color:var(--orange);}
   .topbar .role-pill{
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
-    background:rgba(245,200,38,0.15);color:var(--yellow);padding:4px 9px;border-radius:20px;margin-top:2px;display:inline-block;
+    background:rgba(254,127,45,0.16);color:var(--orange);padding:4px 9px;border-radius:20px;margin-top:2px;display:inline-block;
   }
   .icon-btn{
     width:38px;height:38px;border-radius:50%;background:rgba(247,245,240,0.1);border:none;
@@ -128,7 +128,7 @@
   .cc-chrome .cc-tag{color:var(--orange);}
   .cc-stripe .cc-tag{color:var(--ink);}
   .cc-agenda{grid-area:agenda;background:var(--ink);color:var(--paper);padding:14px;display:flex;align-items:flex-end;min-height:80px;}
-  .cc-agenda .cc-tag{color:var(--yellow);}
+  .cc-agenda .cc-tag{color:var(--orange);}
   .cc-money{grid-area:money;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;min-height:170px;}
   .cc-money .cc-money-label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:rgba(28,30,34,0.5);}
   .cc-money .cc-gold-num{font-family:'Barlow Condensed';font-weight:800;font-size:38px;color:var(--gold);line-height:1.1;margin-top:2px;}
@@ -223,7 +223,7 @@
 
   .fab{
     position:fixed;bottom:92px;right:calc(50% - 240px + 20px);
-    width:58px;height:58px;border-radius:50%;background:var(--yellow);color:var(--ink);
+    width:58px;height:58px;border-radius:50%;background:var(--orange);color:#fff;
     border:2px solid var(--ink);font-size:26px;box-shadow:4px 4px 0px var(--ink);cursor:pointer;
     display:flex;align-items:center;justify-content:center;z-index:20;transition:transform .06s ease, box-shadow .06s ease;
   }
@@ -243,7 +243,7 @@
   .navbtn .ic{font-size:19px;}
   .navbtn .lb{font-size:10px;font-family:'IBM Plex Mono',monospace;letter-spacing:.02em;text-transform:uppercase;}
   .navbtn.active{color:var(--ink);}
-  .navbtn.active .ic{color:var(--yellow-deep);}
+  .navbtn.active .ic{color:var(--orange);}
 
   .helper-clock{
     background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:22px;text-align:center;margin-bottom:20px;
@@ -300,9 +300,7 @@
 
   <!-- ===================== LOGIN ===================== -->
   <div id="loginScreen" class="login-screen">
-    <div class="brand"><div class="chrome-swatch"></div></div>
-    <h1 class="brand-font">TICKET<span class="dot">.</span></h1>
-    <div class="tag">Jobs · Quotes · Invoices — one app</div>
+    <div class="tag" style="margin-top:0;">Jobs · Quotes · Invoices — one app</div>
 
     <div class="field">
       <label>Email</label>
@@ -584,8 +582,8 @@ function moneyHTML(item, kind){
 
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
-  scheduled:'var(--blue)', in_progress:'var(--yellow-deep)', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
-  draft:'var(--blue)', sent:'var(--yellow-deep)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
+  scheduled:'var(--blue)', in_progress:'var(--orange)', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
+  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
 };
 function renderPulse(elId, list, statuses, title){
   const total = list.length;
