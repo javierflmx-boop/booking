@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Ticket — Job & Invoice Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&family=Questrial&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&family=Questrial&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -44,7 +44,7 @@
     margin:0;
   }
   .mono{font-family:'IBM Plex Mono',monospace;}
-  .brand-font{font-family:'Questrial',sans-serif;font-weight:400;text-transform:uppercase;letter-spacing:0.04em;}
+  .brand-font{font-family:'Big Shoulders Display',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:0.01em;}
   #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:78px;}
   button{font-family:inherit;}
 
@@ -89,9 +89,8 @@
   .topbar{
     position:sticky;top:0;z-index:10;background:var(--ink);color:var(--paper);
     padding:18px 20px 15px;display:flex;align-items:center;justify-content:space-between;
-    border-bottom:5px solid transparent;border-image:var(--hazard) 5;
   }
-  .topbar .co-name{font-size:22px;}
+  .topbar .co-name{font-size:26px;}
   .topbar .co-name .dot{color:var(--orange);}
   .topbar .role-pill{
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
@@ -320,7 +319,6 @@
     <div class="topbar">
       <div>
         <div class="co-name brand-font" id="ownerCoName">407 RENOVATIONS<span class="dot">.</span></div>
-        <span class="role-pill">Owner</span>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="icon-btn" onclick="openSettingsModal()">⚙</button>
@@ -428,7 +426,6 @@
     <div class="topbar">
       <div>
         <div class="co-name brand-font">MY JOBS</div>
-        <span class="role-pill">Helper</span>
       </div>
       <button class="icon-btn" onclick="logout()">⎋</button>
     </div>
