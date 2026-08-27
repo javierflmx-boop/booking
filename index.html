@@ -111,7 +111,7 @@
   /* ---------- COMPOSITE NAV CARD (tappable squares/rectangles) ---------- */
   .composite-card{
     display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
-    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money";
+    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money" "pricebook pricebook pricebook";
     gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:14px;
     overflow:hidden;box-shadow:var(--shadow-hard);margin-bottom:4px;
   }
@@ -133,6 +133,9 @@
   .cc-money .cc-gold-num{font-family:'Barlow Condensed';font-weight:800;font-size:38px;color:var(--gold);line-height:1.1;margin-top:2px;}
   .cc-money .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);margin-top:6px;line-height:1.5;}
   .cc-money .cc-tag{color:var(--blue);margin-top:8px;display:inline-block;}
+  .cc-pricebook{grid-area:pricebook;background:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
+  .cc-pricebook .cc-pb-label{font-size:16px;font-weight:700;color:var(--ink);}
+  .cc-pricebook .cc-tag{color:var(--blue);}
 
   /* ---------- MONTH CALENDAR ---------- */
   .cal-wrap{background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-hard);padding:16px;margin-bottom:22px;}
@@ -344,6 +347,10 @@
         <div class="cc-cell cc-agenda" onclick="openAgenda()">
           <span class="cc-tag">Agenda</span>
         </div>
+        <div class="cc-cell cc-pricebook" onclick="openPriceBook()">
+          <span class="cc-pb-label">Price Book</span>
+          <span class="cc-tag">→ See items</span>
+        </div>
       </div>
 
       <div class="section-head"><h2>Pulse</h2><span class="count">how it's going</span></div>
@@ -409,6 +416,16 @@
         <h2 style="font-size:20px;" id="breakdownTitle">Breakdown</h2>
       </div>
       <div class="breakdown-grid" id="breakdownGrid"></div>
+    </div>
+
+    <!-- PRICE BOOK (full page, opened from its tile) -->
+    <div id="ownerTab-pricebook" class="content tabpane hidden">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
+        <h2 style="font-size:20px;flex:1;">Price Book <span class="count" id="priceBookCount"></span></h2>
+        <button class="icon-btn" style="background:var(--orange);color:#fff;border:2px solid var(--ink);" onclick="openPriceItemModal()">+</button>
+      </div>
+      <div id="priceBookList"></div>
     </div>
 
     <button class="fab" onclick="openAddMenu()">+</button>
@@ -479,11 +496,22 @@ const seedData = {
   invoices: [
     {id:1, customerId:1, status:"sent", due:"2026-09-02", items:[{name:"Cabinet install", qty:1, price:2800}]},
   ],
+  priceBook: [
+    {id:1, name:"Interior stairs (per flight)", unit:"each", price:850},
+    {id:2, name:"Tile installation", unit:"sq ft", price:8},
+    {id:3, name:"Cabinet install", unit:"each", price:150},
+    {id:4, name:"Interior paint", unit:"sq ft", price:2.5},
+  ],
   leads: [
     {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
   ],
   settings: { companyName:"407 Renovations", ownerName:"Javier" },
   availability: [],
+  priceBook: [
+    {id:1, name:"Tile installation", unit:"sq ft", price:8},
+    {id:2, name:"Stair rebuild", unit:"each", price:450},
+    {id:3, name:"Cabinet install", unit:"each", price:220},
+  ],
   nextId: 100
 };
 
@@ -496,6 +524,7 @@ function loadData(){
       parsed.leads = parsed.leads || [];
       parsed.settings = parsed.settings || { companyName:"407 Renovations", ownerName:"Javier" };
       parsed.availability = parsed.availability || [];
+      parsed.priceBook = parsed.priceBook || [];
       return parsed;
     }
   }catch(e){}
@@ -577,6 +606,20 @@ function moneyHTML(item, kind){
   </div>`;
 }
 
+function priceItemHTML(p){
+  return `
+  <div class="ticket" onclick="openPriceItemModal(${p.id})">
+    <div class="stripe" style="background:var(--ink);"></div>
+    <div class="punch-hole"></div>
+    <div class="ticket-body">
+      <div class="top-row">
+        <div class="job-title">${p.name}</div>
+        <div class="customer mono">$${Number(p.price).toLocaleString()} / ${p.unit}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
   scheduled:'var(--blue)', in_progress:'var(--orange)', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
@@ -622,6 +665,9 @@ function renderOwner(){
   document.getElementById('invoicesList').innerHTML = db.invoices.map(i=>moneyHTML(i,'invoice')).join('') || emptyState('🧾','No invoices yet.');
   document.getElementById('invoicesCount').textContent = db.invoices.length;
 
+  document.getElementById('priceBookList').innerHTML = db.priceBook.map(priceItemHTML).join('') || emptyState('📋','No price book items yet.');
+  document.getElementById('priceBookCount').textContent = db.priceBook.length;
+
   document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
   const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
   const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
@@ -644,6 +690,7 @@ function showOwnerTab(tab){
   if(btn) btn.classList.add('active');
 }
 function openAgenda(){ renderAgenda(); renderCalendar(); showOwnerTab('agenda'); }
+function openPriceBook(){ showOwnerTab('pricebook'); }
 let calYear, calMonth, selectedCalDate = null;
 (function initCalendar(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); })();
 function isoDate(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
@@ -843,6 +890,7 @@ function openAddMenu(){
           <div class="action-row" onclick="closeModal();openEstimateModal()">Estimate</div>
           <div class="action-row" onclick="closeModal();openInvoiceModal()">Invoice</div>
           <div class="action-row" onclick="closeModal();openCustomerModal()">Customer</div>
+          <div class="action-row" onclick="closeModal();openPriceItemModal()">Price Item</div>
         </div>
         <div class="action-cancel" onclick="closeModal()">Cancel</div>
       </div>
@@ -974,6 +1022,26 @@ function renderLineItems(){
   updateLiTotal();
 }
 function addLineItem(){ lineItemsDraft.push({name:'',qty:1,price:0}); renderLineItems(); }
+function addLineItemFromPriceBook(){
+  if(db.priceBook.length===0){ addLineItem(); return; }
+  openModal(`
+    <div class="sheet-head"><h2>Price Book</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    ${db.priceBook.map(p=>`
+      <div class="menu-option" onclick="pickPriceBookItem(${p.id})">
+        <div>${p.name}<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin-top:2px;">$${Number(p.price).toLocaleString()} / ${p.unit}</div></div>
+      </div>`).join('')}
+  `);
+}
+function pickPriceBookItem(id){
+  const p = db.priceBook.find(p=>p.id===id);
+  lineItemsDraft.push({name:p.name, qty:1, price:p.price});
+  closeModal();
+  const isEstimate = !!document.getElementById('f_estatus');
+  if(isEstimate) reopenLineItemsOnly(); else reopenLineItemsOnly();
+}
+function reopenLineItemsOnly(){
+  renderLineItems();
+}
 function removeLineItem(idx){ lineItemsDraft.splice(idx,1); renderLineItems(); }
 function updateLiTotal(){
   const total = itemsTotal(lineItemsDraft);
@@ -994,7 +1062,10 @@ function openEstimateModal(id){
     </div>
     <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
     <div id="lineItemsBox"></div>
-    <button class="add-li-btn" onclick="addLineItem()">+ Add line item</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
+      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
+    </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveEstimate(${id||'null'})">Save Estimate</button>
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteEstimate('+id+')">Delete Estimate</button>':''}
@@ -1029,7 +1100,10 @@ function openInvoiceModal(id){
     </div>
     <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
     <div id="lineItemsBox"></div>
-    <button class="add-li-btn" onclick="addLineItem()">+ Add line item</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
+      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
+    </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
@@ -1048,6 +1122,36 @@ function saveInvoice(id){
   saveData(); closeModal(); renderOwner();
 }
 function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ---- PRICE BOOK modal ---- */
+function openPriceItemModal(id){
+  const p = id ? db.priceBook.find(p=>p.id===id) : {name:'',unit:'each',price:0};
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Price Item':'New Price Item'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Item name</label><input id="f_pname" value="${(p.name||'').replace(/"/g,'&quot;')}" placeholder="Interior stairs, Tile install..."/></div>
+    <div class="field-row">
+      <div class="field"><label>Unit</label>
+        <select id="f_punit">
+          ${['each','sq ft','linear ft','hour','day','flat'].map(u=>`<option value="${u}" ${u===p.unit?'selected':''}>${u}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Price</label><input id="f_pprice" type="number" value="${p.price||0}" placeholder="0.00"/></div>
+    </div>
+    <button class="btn btn-primary" onclick="savePriceItem(${id||'null'})">Save Item</button>
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deletePriceItem('+id+')">Delete Item</button>':''}
+  `);
+}
+function savePriceItem(id){
+  const data = {
+    name: document.getElementById('f_pname').value.trim() || 'Untitled item',
+    unit: document.getElementById('f_punit').value,
+    price: Number(document.getElementById('f_pprice').value) || 0,
+  };
+  if(id){ Object.assign(db.priceBook.find(p=>p.id===id), data); }
+  else { db.priceBook.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deletePriceItem(id){ db.priceBook = db.priceBook.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
 
 /* ============================================================
    SUPABASE SETUP (next step, once you create the project):
