@@ -239,13 +239,11 @@
     padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:15;
   }
   .navbtn{
-    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-    background:none;border:none;cursor:pointer;color:rgba(28,30,34,0.4);padding:6px 2px;
+    flex:1;display:flex;align-items:center;justify-content:center;
+    background:none;border:none;cursor:pointer;color:rgba(28,30,34,0.4);padding:10px 2px;
   }
-  .navbtn .ic{font-size:19px;}
-  .navbtn .lb{font-size:10px;font-family:'IBM Plex Mono',monospace;letter-spacing:.02em;text-transform:uppercase;}
+  .navbtn .lb{font-size:15px;font-family:'Barlow Condensed',sans-serif;font-weight:500;letter-spacing:.01em;text-transform:uppercase;}
   .navbtn.active{color:var(--ink);}
-  .navbtn.active .ic{color:var(--orange);}
 
   .helper-clock{
     background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:22px;text-align:center;margin-bottom:20px;
@@ -431,10 +429,10 @@
     <button class="fab" onclick="openAddMenu()">+</button>
 
     <div class="bottomnav">
-      <button class="navbtn active" data-tab="dashboard" onclick="showOwnerTab('dashboard')"><span class="ic">⌂</span><span class="lb">Home</span></button>
-      <button class="navbtn" data-tab="jobs" onclick="showOwnerTab('jobs')"><span class="ic">🛠</span><span class="lb">Jobs</span></button>
-      <button class="navbtn" data-tab="customers" onclick="showOwnerTab('customers')"><span class="ic">☺</span><span class="lb">Customers</span></button>
-      <button class="navbtn" data-tab="money" onclick="showOwnerTab('money')"><span class="ic">$</span><span class="lb">Money</span></button>
+      <button class="navbtn active" data-tab="dashboard" onclick="showOwnerTab('dashboard')"><span class="lb">Home</span></button>
+      <button class="navbtn" data-tab="jobs" onclick="showOwnerTab('jobs')"><span class="lb">Jobs</span></button>
+      <button class="navbtn" data-tab="customers" onclick="showOwnerTab('customers')"><span class="lb">Customers</span></button>
+      <button class="navbtn" data-tab="money" onclick="showOwnerTab('money')"><span class="lb">Money</span></button>
     </div>
   </div>
 
@@ -456,9 +454,9 @@
       <div id="helperJobsList"></div>
     </div>
     <div class="bottomnav">
-      <button class="navbtn active"><span class="ic">🛠</span><span class="lb">Today</span></button>
-      <button class="navbtn"><span class="ic">📷</span><span class="lb">Photos</span></button>
-      <button class="navbtn"><span class="ic">☺</span><span class="lb">Profile</span></button>
+      <button class="navbtn active"><span class="lb">Today</span></button>
+      <button class="navbtn"><span class="lb">Photos</span></button>
+      <button class="navbtn"><span class="lb">Profile</span></button>
     </div>
   </div>
 
