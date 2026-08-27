@@ -12,7 +12,7 @@
     --ink:#1C1E22;
     --ink-soft:#2A2D33;
     --paper:#F7F5F0;
-    --paper-dim:#EDEAE2;a
+    --paper-dim:#EDEAE2;
     --yellow:#F5C826;
     --yellow-deep:#D9A800;
     --orange:#FE7F2D;
@@ -117,7 +117,7 @@
   /* ---------- COMPOSITE NAV CARD (tappable squares/rectangles) ---------- */
   .composite-card{
     display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
-    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money" "pricebook pricebook pricebook";
+    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money" "pricebook pricebook pricebook" "partners partners partners";
     gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:14px;
     overflow:hidden;box-shadow:var(--shadow-hard);margin-bottom:4px;
   }
@@ -142,6 +142,9 @@
   .cc-pricebook{grid-area:pricebook;background:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
   .cc-pricebook .cc-pb-label{font-size:16px;font-weight:700;color:var(--ink);}
   .cc-pricebook .cc-tag{color:var(--blue);}
+  .cc-partners{grid-area:partners;background:var(--charcoal);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
+  .cc-partners .cc-pb-label{font-size:16px;font-weight:700;color:#fff;}
+  .cc-partners .cc-tag{color:var(--orange);}
 
   /* ---------- MONTH CALENDAR ---------- */
   .cal-wrap{background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-hard);padding:16px;margin-bottom:22px;}
@@ -358,6 +361,10 @@
           <span class="cc-pb-label">Price Book</span>
           <span class="cc-tag">→ See items</span>
         </div>
+        <div class="cc-cell cc-partners" onclick="openPartners()">
+          <span class="cc-pb-label">Partners</span>
+          <span class="cc-tag">→ See contacts</span>
+        </div>
       </div>
 
       <div class="section-head"><h2>Pulse</h2><span class="count">how it's going</span></div>
@@ -433,6 +440,16 @@
         <button class="icon-btn" style="background:var(--orange);color:#fff;border:2px solid var(--ink);" onclick="openPriceItemModal()">+</button>
       </div>
       <div id="priceBookList"></div>
+    </div>
+
+    <!-- PARTNERS (referral rolodex, full page) -->
+    <div id="ownerTab-partners" class="content tabpane hidden">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
+        <h2 style="font-size:20px;flex:1;">Partners <span class="count" id="partnersCount"></span></h2>
+        <button class="icon-btn" style="background:var(--orange);color:#fff;border:2px solid var(--ink);" onclick="openPartnerModal()">+</button>
+      </div>
+      <div id="partnersList"></div>
     </div>
 
     <button class="fab" onclick="openAddMenu()">+</button>
@@ -533,6 +550,10 @@ const seedData = {
     {id:3, name:"Cabinet install", unit:"each", price:150},
     {id:4, name:"Interior paint", unit:"sq ft", price:2.5},
   ],
+  partners: [
+    {id:1, name:"Ray Delgado", trade:"Plumber", phone:"(407) 555-0133", notes:"Fast for bathroom rough-ins, licensed."},
+    {id:2, name:"Sunbelt Electric", trade:"Electrician", phone:"(407) 555-0164", notes:"Panel upgrades and rewires."},
+  ],
   leads: [
     {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
   ],
@@ -552,6 +573,7 @@ function loadData(){
       parsed.settings = parsed.settings || { companyName:"407 Renovations", ownerName:"Javier" };
       parsed.availability = parsed.availability || [];
       parsed.priceBook = parsed.priceBook || [];
+      parsed.partners = parsed.partners || [];
       parsed.helpers = parsed.helpers || [];
       return parsed;
     }
@@ -684,6 +706,23 @@ function priceItemHTML(p){
     </div>
   </div>`;
 }
+function partnerHTML(p){
+  return `
+  <div class="ticket">
+    <div class="stripe" style="background:var(--charcoal);"></div>
+    <div class="punch-hole"></div>
+    <div class="ticket-body" onclick="openPartnerModal(${p.id})">
+      <div class="top-row">
+        <div>
+          <div class="job-title">${p.name}</div>
+          <div class="customer">${p.trade||'—'}</div>
+        </div>
+      </div>
+      ${p.notes?`<div class="meta-row" style="margin-top:8px;"><span style="font-family:'Inter';font-size:12.5px;color:rgba(28,30,34,0.6);">${p.notes}</span></div>`:''}
+      ${p.phone?`<a href="tel:${p.phone.replace(/[^0-9+]/g,'')}" onclick="event.stopPropagation();" class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);margin-top:12px;text-decoration:none;">📞 Call ${p.phone}</a>`:''}
+    </div>
+  </div>`;
+}
 
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
@@ -732,6 +771,8 @@ function renderOwner(){
 
   document.getElementById('priceBookList').innerHTML = db.priceBook.map(priceItemHTML).join('') || emptyState('📋','No price book items yet.');
   document.getElementById('priceBookCount').textContent = db.priceBook.length;
+  document.getElementById('partnersList').innerHTML = db.partners.map(partnerHTML).join('') || emptyState('🤝','No partners yet.');
+  document.getElementById('partnersCount').textContent = db.partners.length;
 
   document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
   const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
@@ -824,6 +865,7 @@ function showOwnerTab(tab){
 }
 function openAgenda(){ renderAgenda(); renderCalendar(); showOwnerTab('agenda'); }
 function openPriceBook(){ showOwnerTab('pricebook'); }
+function openPartners(){ showOwnerTab('partners'); }
 let calYear, calMonth, selectedCalDate = null;
 (function initCalendar(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); })();
 function isoDate(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
@@ -1058,7 +1100,7 @@ function saveSettings(){
 function confirmClearAll(){
   openModal(`
     <div class="sheet-head"><h2>Are you sure?</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This deletes all ${db.jobs.length} jobs, ${db.customers.length} customers, ${db.leads.length} leads, ${db.estimates.length} estimates, and ${db.invoices.length} invoices currently on this device. There's no undo.</p>
+    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This deletes all ${db.jobs.length} jobs, ${db.customers.length} customers, ${db.leads.length} leads, ${db.estimates.length} estimates, and ${db.invoices.length} invoices currently on this device. Your price book and partners list are kept. There's no undo.</p>
     <button class="btn btn-danger" onclick="clearAllData()">Yes, delete everything</button>
     <button class="btn btn-secondary" style="margin-top:10px;" onclick="openSettingsModal()">Cancel</button>
   `);
@@ -1080,6 +1122,7 @@ function openAddMenu(){
           <div class="action-row" onclick="closeModal();openInvoiceModal()">Invoice</div>
           <div class="action-row" onclick="closeModal();openCustomerModal()">Customer</div>
           <div class="action-row" onclick="closeModal();openPriceItemModal()">Price Item</div>
+          <div class="action-row" onclick="closeModal();openPartnerModal()">Partner</div>
         </div>
         <div class="action-cancel" onclick="closeModal()">Cancel</div>
       </div>
@@ -1405,6 +1448,34 @@ function savePriceItem(id){
   saveData(); closeModal(); renderOwner();
 }
 function deletePriceItem(id){ db.priceBook = db.priceBook.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ---- PARTNER modal ---- */
+function openPartnerModal(id){
+  const p = id ? db.partners.find(p=>p.id===id) : {name:'',trade:'',phone:'',notes:''};
+  openModal(`
+    <div class="sheet-head"><h2>${id?'Edit Partner':'New Partner'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Name</label><input id="f_pname" value="${p.name.replace(/"/g,'&quot;')}" placeholder="Ray Delgado / Sunbelt Electric"/></div>
+    <div class="field-row">
+      <div class="field"><label>Trade</label><input id="f_ptrade" value="${p.trade||''}" placeholder="Plumber"/></div>
+      <div class="field"><label>Phone</label><input id="f_pphone" value="${p.phone||''}" placeholder="(407) 555-0100"/></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f_pnotes" placeholder="Why you'd call them, what they're good at...">${p.notes||''}</textarea></div>
+    <button class="btn btn-primary" onclick="savePartner(${id||'null'})">Save Partner</button>
+    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deletePartner('+id+')">Delete Partner</button>':''}
+  `);
+}
+function savePartner(id){
+  const data = {
+    name: document.getElementById('f_pname').value.trim() || 'Unnamed partner',
+    trade: document.getElementById('f_ptrade').value.trim(),
+    phone: document.getElementById('f_pphone').value.trim(),
+    notes: document.getElementById('f_pnotes').value.trim(),
+  };
+  if(id){ Object.assign(db.partners.find(p=>p.id===id), data); }
+  else { db.partners.push({id:newId(), ...data}); }
+  saveData(); closeModal(); renderOwner();
+}
+function deletePartner(id){ db.partners = db.partners.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
 
 /* ============================================================
    SUPABASE SETUP (next step, once you create the project):
