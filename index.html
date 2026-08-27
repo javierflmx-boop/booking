@@ -462,6 +462,7 @@
 
   <!-- ===================== MODAL ROOT ===================== -->
   <div id="modalRoot"></div>
+  <div id="pickerRoot"></div>
 
 </div>
 
@@ -684,6 +685,7 @@ function renderOwner(){
   const moneyComing = openTotal + db.estimates.filter(e=>e.status==='sent').reduce((s,e)=>s+itemsTotal(e.items),0);
   document.getElementById('ccGoldNum').textContent = '$'+moneyComing.toLocaleString();
   renderAgenda();
+  if(document.getElementById('calGrid')) renderCalendar();
 }
 function emptyState(glyph, text){ return `<div class="empty-state"><div class="glyph">${glyph}</div><p>${text}</p></div>`; }
 function renderHelper(){
@@ -703,6 +705,7 @@ let calYear, calMonth, selectedCalDate = null;
 (function initCalendar(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); })();
 function isoDate(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 function jobsOnDate(dateStr){ return db.jobs.filter(j=>j.date===dateStr); }
+function estimatesOnDate(dateStr){ return db.estimates.filter(e=>e.date===dateStr); }
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function renderCalendar(){
   document.getElementById('calMonthLabel').textContent = MONTH_NAMES[calMonth]+' '+calYear;
@@ -713,10 +716,10 @@ function renderCalendar(){
   for(let i=0;i<firstDow;i++) html += `<div class="cal-day empty"></div>`;
   for(let d=1; d<=daysInMonth; d++){
     const dateStr = isoDate(calYear, calMonth, d);
-    const hasJob = jobsOnDate(dateStr).length>0;
+    const hasSomething = jobsOnDate(dateStr).length>0 || estimatesOnDate(dateStr).length>0;
     const blocked = db.availability.includes(dateStr);
     let cls='cal-day';
-    if(hasJob) cls+=' has-job';
+    if(hasSomething) cls+=' has-job';
     else if(blocked) cls+=' blocked';
     if(dateStr===todayStr) cls+=' today';
     if(dateStr===selectedCalDate) cls+=' selected';
@@ -732,14 +735,20 @@ function renderCalDayPanel(){
   const panel = document.getElementById('calDayPanel');
   if(!selectedCalDate){ panel.innerHTML=''; return; }
   const jobsHere = jobsOnDate(selectedCalDate);
+  const estimatesHere = estimatesOnDate(selectedCalDate);
   const blocked = db.availability.includes(selectedCalDate);
   let html = `<h4>${selectedCalDate}</h4>`;
-  if(jobsHere.length){
+  if(jobsHere.length || estimatesHere.length){
     html += jobsHere.map(ticketHTML).join('');
+    html += estimatesHere.map(e=>moneyHTML(e,'estimate')).join('');
   } else {
-    html += `<p style="font-size:13px;color:rgba(28,30,34,0.5);margin:0 0 10px;">Nothing scheduled this day.</p>
-      <button class="btn ${blocked?'btn-secondary':'btn-danger'}" onclick="toggleAvailability('${selectedCalDate}')">${blocked?'Mark Available Again':'Mark Unavailable'}</button>`;
+    html += `<p style="font-size:13px;color:rgba(28,30,34,0.5);margin:0 0 10px;">Nothing scheduled this day.</p>`;
   }
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+    <button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);" onclick="openJobModal(null,'${selectedCalDate}')">+ Job here</button>
+    <button class="btn btn-secondary" onclick="openEstimateModal(null,'${selectedCalDate}')">+ Estimate here</button>
+  </div>
+  <button class="btn ${blocked?'btn-secondary':'btn-danger'}" style="margin-top:10px;" onclick="toggleAvailability('${selectedCalDate}')">${blocked?'Mark Available Again':'Mark Unavailable'}</button>`;
   panel.innerHTML = html;
 }
 function toggleAvailability(dateStr){
@@ -905,8 +914,8 @@ function openAddMenu(){
 }
 
 /* ---- JOB modal ---- */
-function openJobModal(id){
-  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',time:'',date:todayPlus(0),address:'',notes:'',items:[]};
+function openJobModal(id, presetDate){
+  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',time:'',date:presetDate||todayPlus(0),address:'',notes:'',items:[]};
   lineItemsDraft = JSON.parse(JSON.stringify(job.items||[]));
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Job':'New Job'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
@@ -1041,22 +1050,23 @@ function renderLineItems(){
 function addLineItem(){ lineItemsDraft.push({name:'',qty:1,price:0}); renderLineItems(); }
 function addLineItemFromPriceBook(){
   if(db.priceBook.length===0){ addLineItem(); return; }
-  openModal(`
-    <div class="sheet-head"><h2>Price Book</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    ${db.priceBook.map(p=>`
-      <div class="menu-option" onclick="pickPriceBookItem(${p.id})">
-        <div>${p.name}<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin-top:2px;">$${Number(p.price).toLocaleString()} / ${p.unit}</div></div>
-      </div>`).join('')}
-  `);
+  document.getElementById('pickerRoot').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closePicker()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><h2>Price Book</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        ${db.priceBook.map(p=>`
+          <div class="menu-option" onclick="pickPriceBookItem(${p.id})">
+            <div>${p.name}<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin-top:2px;">$${Number(p.price).toLocaleString()} / ${p.unit}</div></div>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
+function closePicker(){ document.getElementById('pickerRoot').innerHTML = ''; }
 function pickPriceBookItem(id){
   const p = db.priceBook.find(p=>p.id===id);
   lineItemsDraft.push({name:p.name, qty:1, price:p.price});
-  closeModal();
-  const isEstimate = !!document.getElementById('f_estatus');
-  if(isEstimate) reopenLineItemsOnly(); else reopenLineItemsOnly();
-}
-function reopenLineItemsOnly(){
+  closePicker();
   renderLineItems();
 }
 function removeLineItem(idx){ lineItemsDraft.splice(idx,1); renderLineItems(); }
@@ -1066,16 +1076,19 @@ function updateLiTotal(){
   if(el) el.textContent = '$'+total.toLocaleString();
 }
 
-function openEstimateModal(id){
-  const e = id ? db.estimates.find(e=>e.id===id) : {customerId:db.customers[0]?.id,status:'draft',items:[{name:'',qty:1,price:0}]};
+function openEstimateModal(id, presetDate){
+  const e = id ? db.estimates.find(e=>e.id===id) : {customerId:db.customers[0]?.id,status:'draft',date:presetDate||'',items:[{name:'',qty:1,price:0}]};
   lineItemsDraft = JSON.parse(JSON.stringify(e.items));
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Estimate':'New Estimate'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Customer</label><select id="f_ecustomer">${customerOptions(e.customerId)}</select></div>
-    <div class="field"><label>Status</label>
-      <select id="f_estatus">
-        ${['draft','sent','approved','declined'].map(s=>`<option value="${s}" ${s===e.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
-      </select>
+    <div class="field-row">
+      <div class="field"><label>Status</label>
+        <select id="f_estatus">
+          ${['draft','sent','approved','declined'].map(s=>`<option value="${s}" ${s===e.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Site visit date (optional)</label><input id="f_edate" type="date" value="${e.date||''}"/></div>
     </div>
     <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
     <div id="lineItemsBox"></div>
@@ -1093,6 +1106,7 @@ function saveEstimate(id){
   const data = {
     customerId: Number(document.getElementById('f_ecustomer').value),
     status: document.getElementById('f_estatus').value,
+    date: document.getElementById('f_edate').value,
     items: lineItemsDraft.filter(i=>i.name.trim()!==''),
   };
   if(id){ Object.assign(db.estimates.find(e=>e.id===id), data); }
