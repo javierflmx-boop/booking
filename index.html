@@ -554,6 +554,7 @@ function ticketHTML(job){
       <div class="meta-row">
         <span>🕐 ${job.when||'Unscheduled'}</span>
         <span>📍 ${job.address||'—'}</span>
+        ${job.items && job.items.length ? `<span class="mono">$${itemsTotal(job.items).toLocaleString()}</span>` : ''}
       </div>
     </div>
   </div>`;
@@ -899,7 +900,8 @@ function openAddMenu(){
 
 /* ---- JOB modal ---- */
 function openJobModal(id){
-  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',when:'',address:'',notes:''};
+  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',when:'',address:'',notes:'',items:[]};
+  lineItemsDraft = JSON.parse(JSON.stringify(job.items||[]));
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Job':'New Job'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Job title</label><input id="f_title" value="${job.title.replace(/"/g,'&quot;')}" placeholder="Kitchen remodel"/></div>
@@ -915,9 +917,17 @@ function openJobModal(id){
     <div class="field"><label>Date (for the calendar)</label><input id="f_date" type="date" value="${job.date||''}"/></div>
     <div class="field"><label>Address</label><input id="f_address" value="${(job.address||'').replace(/"/g,'&quot;')}" placeholder="Job site address"/></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Scope, access notes...">${job.notes||''}</textarea></div>
+    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Cost / items (optional)</label>
+    <div id="lineItemsBox"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
+      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
+    </div>
+    <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteJob('+id+')">Delete Job</button>':''}
   `);
+  renderLineItems();
 }
 function saveJob(id){
   const data = {
@@ -928,6 +938,7 @@ function saveJob(id){
     date: document.getElementById('f_date').value,
     address: document.getElementById('f_address').value.trim(),
     notes: document.getElementById('f_notes').value.trim(),
+    items: lineItemsDraft.filter(i=>i.name.trim()!==''),
   };
   if(id){ Object.assign(db.jobs.find(j=>j.id===id), data); }
   else { db.jobs.push({id:newId(), ...data}); }
