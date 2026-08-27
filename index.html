@@ -205,6 +205,7 @@
   .ticket .stripe{width:10px;flex-shrink:0;background:var(--blue);}
   .ticket.status-scheduled .stripe, .ticket.status-sent .stripe, .ticket.status-draft .stripe{background:var(--blue);}
   .ticket.status-in_progress .stripe{background:var(--orange);}
+  .ticket.status-paused .stripe{background:#8a8f98;}
   .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
   .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
   .ticket .punch-hole{
@@ -222,6 +223,7 @@
   }
   .status-tag.scheduled, .status-tag.sent, .status-tag.draft{background:rgba(44,95,124,0.1);color:var(--blue);border-color:var(--blue);}
   .status-tag.in_progress{background:rgba(232,93,44,0.1);color:var(--orange);border-color:var(--orange);}
+  .status-tag.paused{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;}
   .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.1);color:var(--green);border-color:var(--green);}
   .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);border-color:var(--red);}
 
@@ -575,7 +577,9 @@ function ticketHTML(job){
 }
 function helperTicketHTML(job){
   const canStart = job.status==='scheduled';
-  const canComplete = job.status==='in_progress';
+  const canPause = job.status==='in_progress';
+  const canComplete = job.status==='in_progress'||job.status==='paused';
+  const canResume = job.status==='paused';
   return `
   <div class="ticket status-${job.status}">
     <div class="stripe"></div>
@@ -593,9 +597,11 @@ function helperTicketHTML(job){
         <span>📍 ${job.address||'—'}</span>
       </div>
       ${job.notes?`<div class="meta-row" style="margin-top:6px;"><span style="font-family:'Inter';font-size:12.5px;color:rgba(28,30,34,0.6);">${job.notes}</span></div>`:''}
-      ${canStart||canComplete?`<div style="display:flex;gap:8px;margin-top:12px;">
-        ${canStart?`<button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'in_progress')">Start Job</button>`:''}
-        ${canComplete?`<button class="btn btn-secondary" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'completed')">Mark Complete</button>`:''}
+      ${canStart||canPause||canComplete||canResume?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        ${canStart?`<button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'in_progress')">Start Job</button>`:''}
+        ${canResume?`<button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'in_progress')">Resume</button>`:''}
+        ${canPause?`<button class="btn btn-secondary" style="flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'paused')">Pause</button>`:''}
+        ${canComplete?`<button class="btn btn-secondary" style="flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'completed')">Mark Complete</button>`:''}
       </div>`:''}
     </div>
   </div>`;
@@ -668,7 +674,7 @@ function priceItemHTML(p){
 
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
-  scheduled:'var(--blue)', in_progress:'var(--orange)', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
+  scheduled:'var(--blue)', in_progress:'var(--orange)', paused:'#8a8f98', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
   draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
 };
 function renderPulse(elId, list, statuses, title){
@@ -690,7 +696,7 @@ function renderPulse(elId, list, statuses, title){
 /* ---------- RENDER OWNER APP ---------- */
 function renderOwner(){
   document.getElementById('ownerCoName').innerHTML = (db.settings.companyName||'MY COMPANY').toUpperCase() + '<span class="dot">.</span>';
-  renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','completed','invoiced','cancelled'], 'Jobs');
+  renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','paused','completed','invoiced','cancelled'], 'Jobs');
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
   renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
 
@@ -798,6 +804,7 @@ const BREAKDOWN_CONFIG = {
   jobs: { title:'Jobs Breakdown', baseColor:'#FE7F2D', statuses:[
     {key:'scheduled', label:'Scheduled', sub:'On the books', h:'bd-h1'},
     {key:'in_progress', label:'In Progress', sub:'Crew is on site', h:'bd-h2'},
+    {key:'paused', label:'Paused', sub:'On hold', h:'bd-h4'},
     {key:'completed', label:'Completed', sub:'Done, not billed', h:'bd-h3'},
     {key:'invoiced', label:'Invoiced', sub:'Billed out', h:'bd-h4'},
     {key:'cancelled', label:'Cancelled', sub:"Didn't happen", h:'bd-h2'},
@@ -961,7 +968,7 @@ function openJobModal(id, presetDate){
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_status">
-          ${['scheduled','in_progress','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+          ${['scheduled','in_progress','paused','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Date</label><input id="f_date" type="date" value="${job.date||todayPlus(0)}"/></div>
