@@ -697,30 +697,36 @@ function toggleAvailability(dateStr){
   else db.availability.push(dateStr);
   saveData(); renderCalendar();
 }
-/* ---------- BREAKDOWN PAGE ---------- */
+/* ---------- BREAKDOWN PAGE (single hue per tab, intensity = share of total) ---------- */
 const BREAKDOWN_CONFIG = {
-  jobs: { title:'Jobs Breakdown', statuses:[
-    {key:'scheduled', label:'Scheduled', sub:'On the books', bg:'#F7F5F0', fg:'#1C1E22', h:'bd-h1'},
-    {key:'in_progress', label:'In Progress', sub:'Crew is on site', bg:'#4A7E9B', fg:'#fff', h:'bd-h2'},
-    {key:'completed', label:'Completed', sub:'Done, not billed', bg:'#1C1E22', fg:'#F5C826', h:'bd-h3'},
-    {key:'invoiced', label:'Invoiced', sub:'Billed out', bg:'#EDEAE2', fg:'#1C1E22', h:'bd-h4'},
-    {key:'cancelled', label:'Cancelled', sub:"Didn't happen", bg:'#CFE0E8', fg:'#1C1E22', h:'bd-h2'},
+  jobs: { title:'Jobs Breakdown', baseColor:'#FE7F2D', statuses:[
+    {key:'scheduled', label:'Scheduled', sub:'On the books', h:'bd-h1'},
+    {key:'in_progress', label:'In Progress', sub:'Crew is on site', h:'bd-h2'},
+    {key:'completed', label:'Completed', sub:'Done, not billed', h:'bd-h3'},
+    {key:'invoiced', label:'Invoiced', sub:'Billed out', h:'bd-h4'},
+    {key:'cancelled', label:'Cancelled', sub:"Didn't happen", h:'bd-h2'},
   ]},
-  estimates: { title:'Estimates Breakdown', statuses:[
-    {key:'draft', label:'Draft', sub:'Not sent yet', bg:'#FBEEE0', fg:'#1C1E22', h:'bd-h1'},
-    {key:'sent', label:'Sent', sub:'Waiting on client', bg:'#FE7F2D', fg:'#fff', h:'bd-h3'},
-    {key:'approved', label:'Approved', sub:'Ready to schedule', bg:'#F5A25D', fg:'#1C1E22', h:'bd-h2'},
-    {key:'declined', label:'Declined', sub:"Didn't win it", bg:'#EDEAE2', fg:'#1C1E22', h:'bd-h4'},
+  estimates: { title:'Estimates Breakdown', baseColor:'#2C5F7C', statuses:[
+    {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
+    {key:'sent', label:'Sent', sub:'Waiting on client', h:'bd-h3'},
+    {key:'approved', label:'Approved', sub:'Ready to schedule', h:'bd-h2'},
+    {key:'declined', label:'Declined', sub:"Didn't win it", h:'bd-h4'},
   ]},
-  invoices: { title:'Invoices Breakdown', statuses:[
-    {key:'draft', label:'Draft', sub:'Not sent yet', bg:'#FBEEE0', fg:'#1C1E22', h:'bd-h1'},
-    {key:'sent', label:'Sent', sub:'Awaiting payment', bg:'#C9A227', fg:'#fff', h:'bd-h2'},
-    {key:'paid', label:'Paid', sub:'Money in', bg:'#3E8914', fg:'#fff', h:'bd-h3'},
-    {key:'overdue', label:'Overdue', sub:'Follow up', bg:'#C1440E', fg:'#fff', h:'bd-h4'},
+  invoices: { title:'Invoices Breakdown', baseColor:'#233D4D', statuses:[
+    {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
+    {key:'sent', label:'Sent', sub:'Awaiting payment', h:'bd-h2'},
+    {key:'paid', label:'Paid', sub:'Money in', h:'bd-h3'},
+    {key:'overdue', label:'Overdue', sub:'Follow up', h:'bd-h4'},
   ]},
 };
 function getListForType(type){ return type==='jobs' ? db.jobs : type==='estimates' ? db.estimates : db.invoices; }
 function openBreakdown(type){ renderBreakdownPage(type); showOwnerTab('breakdown'); }
+function shadeStyle(baseHex, ratio){
+  const whitePct = Math.max(8, Math.round(92 - ratio*84));
+  const bg = `color-mix(in srgb, white ${whitePct}%, ${baseHex} ${100-whitePct}%)`;
+  const fg = whitePct > 48 ? '#1C1E22' : '#ffffff';
+  return { bg, fg };
+}
 function renderBreakdownPage(type){
   const cfg = BREAKDOWN_CONFIG[type];
   const list = getListForType(type);
@@ -728,7 +734,9 @@ function renderBreakdownPage(type){
   document.getElementById('breakdownTitle').textContent = cfg.title + ' — ' + total + ' total';
   document.getElementById('breakdownGrid').innerHTML = cfg.statuses.map(s=>{
     const n = list.filter(x=>x.status===s.key).length;
-    return `<div class="breakdown-card ${s.h}" style="background:${s.bg};color:${s.fg};">
+    const ratio = total ? n/total : 0;
+    const {bg, fg} = shadeStyle(cfg.baseColor, ratio);
+    return `<div class="breakdown-card ${s.h}" style="background:${bg};color:${fg};">
       <div><h4>${s.label}</h4><div class="bd-sub">${s.sub}</div></div>
       <div class="bd-pct">${n}</div>
     </div>`;
