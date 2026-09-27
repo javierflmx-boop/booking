@@ -319,22 +319,22 @@
   </div>
 
   <!-- ===================== LOGIN ===================== -->
-  <div id="loginScreen" class="login-screen hidden">
+  <div id="loginScreen" class="login-screen">
     <h1 class="brand-font" style="color:var(--paper);font-size:36px;margin-bottom:8px;">ESTIMO<span class="dot">.</span></h1>
     <div class="tag" style="margin-top:0;">Jobs · Quotes · Invoices — one app</div>
 
     <div class="field">
       <label>Email</label>
-      <input id="loginEmail" type="email" placeholder="you@407renovations.com" value="javier@407renovations.com"/>
+      <input id="authEmail" type="email" placeholder="you@yourcompany.com"/>
     </div>
     <div class="field">
       <label>Password</label>
-      <input id="loginPassword" type="password" placeholder="••••••••"/>
+      <input id="authPassword" type="password" placeholder="••••••••"/>
     </div>
-    <button class="btn btn-primary" onclick="enterApp('owner')">Sign in as Owner</button>
-    <div class="field" style="margin-top:14px;"><select id="loginHelperSelect"></select></div>
-    <button class="btn btn-ghost" onclick="enterApp('helper')">Sign in as Helper</button>
-    <div class="switch-role">Demo mode — data saves to this device until Supabase is connected.</div>
+    <div id="authError" style="color:#ff8a6b;font-size:13px;margin-bottom:12px;display:none;"></div>
+    <button class="btn btn-primary" id="authPrimaryBtn" onclick="handleLogIn()">Log In</button>
+    <button class="btn btn-ghost" onclick="handleSignUp()">Create New Account</button>
+    <div class="switch-role">Your own private data — nobody else can see it.</div>
   </div>
 
   <!-- ===================== OWNER APP ===================== -->
@@ -345,6 +345,7 @@
       </div>
       <div style="display:flex;gap:14px;">
         <button class="topbar-btn" onclick="openSettingsModal()">Settings</button>
+        <button class="topbar-btn" onclick="logout()">Log Out</button>
       </div>
     </div>
 
@@ -574,14 +575,14 @@ const seedData = {
 
 /* ============================================================
    SUPABASE — cloud storage for Estimo. No login: this app uses
-   the publishable key with open read/write on one table, so data
-   syncs to the cloud instead of staying stuck on one phone.
+   the publishable key with real accounts (Supabase Auth), so each
+   person's data is private and syncs to the cloud automatically.
    ============================================================ */
 const supabaseClient = window.supabase.createClient(
   'https://wbuxwlcbsbhpviutmjsi.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidXh3bGNic2JocHZpdXRtanNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NzIwODQsImV4cCI6MjEwNjA0ODA4NH0.tukYhD4tf4fPhwz2FqE-aeJxA23oUjfofmQ5UGOklhE'
 );
-const CLOUD_ROW_ID = 'main';
+let currentUserId = null;
 
 let db = JSON.parse(JSON.stringify(seedData));
 
@@ -591,7 +592,7 @@ function loadLocalCache(){
     if(raw){
       const parsed = JSON.parse(raw);
       parsed.leads = parsed.leads || [];
-      parsed.settings = parsed.settings || { companyName:"407 Renovations", ownerName:"Javier" };
+      parsed.settings = parsed.settings || { companyName:"My Company", ownerName:"" };
       parsed.availability = parsed.availability || [];
       parsed.priceBook = parsed.priceBook || [];
       parsed.partners = parsed.partners || [];
@@ -607,34 +608,42 @@ async function loadFromCloud(){
     const { data, error } = await supabaseClient
       .from('estimo_data')
       .select('data')
-      .eq('id', CLOUD_ROW_ID)
+      .eq('id', currentUserId)
       .maybeSingle();
     if(error) throw error;
     if(data && data.data){
       const cloudDb = data.data;
       cloudDb.leads = cloudDb.leads || [];
-      cloudDb.settings = cloudDb.settings || { companyName:"407 Renovations", ownerName:"Javier" };
+      cloudDb.settings = cloudDb.settings || { companyName:"My Company", ownerName:"" };
       cloudDb.availability = cloudDb.availability || [];
       cloudDb.priceBook = cloudDb.priceBook || [];
       cloudDb.partners = cloudDb.partners || [];
       cloudDb.helpers = cloudDb.helpers || [];
       return cloudDb;
     }
-    // No row yet — first run. Seed the cloud with local cache or defaults.
-    const initial = loadLocalCache() || JSON.parse(JSON.stringify(seedData));
-    await supabaseClient.from('estimo_data').upsert({ id: CLOUD_ROW_ID, data: initial });
+    // No row yet — brand new account. Start empty, not with someone else's demo data.
+    const initial = freshBlankData();
+    await supabaseClient.from('estimo_data').upsert({ id: currentUserId, data: initial });
     return initial;
   }catch(e){
     console.error('Cloud load failed, using local cache:', e);
-    return loadLocalCache() || JSON.parse(JSON.stringify(seedData));
+    return loadLocalCache() || freshBlankData();
   }
+}
+function freshBlankData(){
+  return {
+    customers: [], jobs: [], leads: [], estimates: [], invoices: [],
+    settings: { companyName:"My Company", ownerName:"" },
+    availability: [], priceBook: [], partners: [], helpers: [], nextId: 1
+  };
 }
 
 function saveData(){
   // Instant local cache so the UI never waits on the network.
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  // Fire-and-forget sync to the cloud.
-  supabaseClient.from('estimo_data').upsert({ id: CLOUD_ROW_ID, data: db, updated_at: new Date().toISOString() })
+  // Fire-and-forget sync to the cloud, scoped to this account only.
+  if(!currentUserId) return;
+  supabaseClient.from('estimo_data').upsert({ id: currentUserId, data: db, updated_at: new Date().toISOString() })
     .then(({error}) => { if(error) console.error('Cloud save failed:', error); });
 }
 function newId(){ return db.nextId++; }
@@ -1040,28 +1049,23 @@ function renderAgenda(){
 }
 
 let currentHelperId = null;
-function refreshLoginHelperOptions(){
-  const sel = document.getElementById('loginHelperSelect');
-  sel.innerHTML = db.helpers.length ? db.helpers.map(h=>`<option value="${h.id}">${h.name}</option>`).join('') : '<option value="">No helpers added yet</option>';
-}
-function enterApp(role){
+function enterApp(){
   document.getElementById('loginScreen').classList.add('hidden');
-  if(role==='owner'){
-    document.getElementById('ownerApp').classList.remove('hidden');
-    renderOwner();
-  } else {
-    const sel = document.getElementById('loginHelperSelect');
-    currentHelperId = sel.value ? Number(sel.value) : null;
-    document.getElementById('helperApp').classList.remove('hidden');
-    showHelperTab('today');
-    renderHelper();
-  }
+  document.getElementById('ownerApp').classList.remove('hidden');
+  renderOwner();
 }
-function logout(){
+async function logout(){
   document.getElementById('ownerApp').classList.add('hidden');
   document.getElementById('helperApp').classList.add('hidden');
   currentHelperId = null;
-  enterApp('owner');
+  currentUserId = null;
+  await supabaseClient.auth.signOut();
+  localStorage.removeItem(STORAGE_KEY);
+  db = JSON.parse(JSON.stringify(freshBlankData()));
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  showAuthError('');
+  document.getElementById('loginScreen').classList.remove('hidden');
 }
 function previewHelper(){
   closeModal();
@@ -1071,7 +1075,38 @@ function previewHelper(){
   showHelperTab('today');
   renderHelper();
 }
-refreshLoginHelperOptions();
+function showAuthError(msg){
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+async function handleSignUp(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!email || !password){ showAuthError('Enter an email and password.'); return; }
+  if(password.length < 6){ showAuthError('Password needs at least 6 characters.'); return; }
+  showAuthError('');
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if(error){ showAuthError(error.message); return; }
+  if(!data.session){
+    showAuthError('Account created — check your email to confirm, then log in.');
+    return;
+  }
+  currentUserId = data.user.id;
+  db = await loadFromCloud();
+  enterApp();
+}
+async function handleLogIn(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!email || !password){ showAuthError('Enter your email and password.'); return; }
+  showAuthError('');
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){ showAuthError(error.message); return; }
+  currentUserId = data.user.id;
+  db = await loadFromCloud();
+  enterApp();
+}
 
 let clockedIn=false, clockStart=null, clockTimer=null;
 function toggleClock(){
@@ -1541,12 +1576,19 @@ function savePartner(id){
 }
 function deletePartner(id){ db.partners = db.partners.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
 
-/* Boots straight into the Owner view once cloud data has loaded —
-   no login screen, single-user phone app connected to Supabase. */
+/* On load: if this device already has a logged-in session (Supabase
+   remembers it), skip straight to the dashboard. Otherwise show the
+   sign-up/log-in screen. */
 (async function boot(){
-  db = await loadFromCloud();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   document.getElementById('bootLoader').classList.add('hidden');
-  enterApp('owner');
+  if(session){
+    currentUserId = session.user.id;
+    db = await loadFromCloud();
+    enterApp();
+  } else {
+    document.getElementById('loginScreen').classList.remove('hidden');
+  }
 })();
 </script>
 </body>
