@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Ticket — Job & Invoice Manager</title>
+<title>Estimo — Job & Invoice Manager</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23FE7F2D'/%3E%3Ctext x='50' y='68' font-family='Georgia,serif' font-size='60' font-weight='bold' fill='%231C1E22' text-anchor='middle'%3EE%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#1C1E22">
+<meta name="apple-mobile-web-app-title" content="Estimo">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&family=Questrial&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -309,8 +314,13 @@
 
 <div id="app">
 
+  <div id="bootLoader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--charcoal);color:var(--paper);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.05em;text-transform:uppercase;opacity:0.7;">
+    Loading your data...
+  </div>
+
   <!-- ===================== LOGIN ===================== -->
-  <div id="loginScreen" class="login-screen">
+  <div id="loginScreen" class="login-screen hidden">
+    <h1 class="brand-font" style="color:var(--paper);font-size:36px;margin-bottom:8px;">ESTIMO<span class="dot">.</span></h1>
     <div class="tag" style="margin-top:0;">Jobs · Quotes · Invoices — one app</div>
 
     <div class="field">
@@ -335,7 +345,6 @@
       </div>
       <div style="display:flex;gap:14px;">
         <button class="topbar-btn" onclick="openSettingsModal()">Settings</button>
-        <button class="topbar-btn" onclick="logout()">Log Out</button>
       </div>
     </div>
 
@@ -563,8 +572,20 @@ const seedData = {
   nextId: 100
 };
 
-let db = loadData();
-function loadData(){
+/* ============================================================
+   SUPABASE — cloud storage for Estimo. No login: this app uses
+   the publishable key with open read/write on one table, so data
+   syncs to the cloud instead of staying stuck on one phone.
+   ============================================================ */
+const supabaseClient = window.supabase.createClient(
+  'https://wbuxwlcbsbhpviutmjsi.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidXh3bGNic2JocHZpdXRtanNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NzIwODQsImV4cCI6MjEwNjA0ODA4NH0.tukYhD4tf4fPhwz2FqE-aeJxA23oUjfofmQ5UGOklhE'
+);
+const CLOUD_ROW_ID = 'main';
+
+let db = JSON.parse(JSON.stringify(seedData));
+
+function loadLocalCache(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
@@ -578,9 +599,44 @@ function loadData(){
       return parsed;
     }
   }catch(e){}
-  return JSON.parse(JSON.stringify(seedData));
+  return null;
 }
-function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+
+async function loadFromCloud(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('estimo_data')
+      .select('data')
+      .eq('id', CLOUD_ROW_ID)
+      .maybeSingle();
+    if(error) throw error;
+    if(data && data.data){
+      const cloudDb = data.data;
+      cloudDb.leads = cloudDb.leads || [];
+      cloudDb.settings = cloudDb.settings || { companyName:"407 Renovations", ownerName:"Javier" };
+      cloudDb.availability = cloudDb.availability || [];
+      cloudDb.priceBook = cloudDb.priceBook || [];
+      cloudDb.partners = cloudDb.partners || [];
+      cloudDb.helpers = cloudDb.helpers || [];
+      return cloudDb;
+    }
+    // No row yet — first run. Seed the cloud with local cache or defaults.
+    const initial = loadLocalCache() || JSON.parse(JSON.stringify(seedData));
+    await supabaseClient.from('estimo_data').upsert({ id: CLOUD_ROW_ID, data: initial });
+    return initial;
+  }catch(e){
+    console.error('Cloud load failed, using local cache:', e);
+    return loadLocalCache() || JSON.parse(JSON.stringify(seedData));
+  }
+}
+
+function saveData(){
+  // Instant local cache so the UI never waits on the network.
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  // Fire-and-forget sync to the cloud.
+  supabaseClient.from('estimo_data').upsert({ id: CLOUD_ROW_ID, data: db, updated_at: new Date().toISOString() })
+    .then(({error}) => { if(error) console.error('Cloud save failed:', error); });
+}
 function newId(){ return db.nextId++; }
 function customerName(id){ const c=db.customers.find(c=>c.id===id); return c ? c.name : 'No customer'; }
 function itemsTotal(items){ return items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.price)||0),0); }
@@ -1004,9 +1060,16 @@ function enterApp(role){
 function logout(){
   document.getElementById('ownerApp').classList.add('hidden');
   document.getElementById('helperApp').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
   currentHelperId = null;
-  refreshLoginHelperOptions();
+  enterApp('owner');
+}
+function previewHelper(){
+  closeModal();
+  document.getElementById('ownerApp').classList.add('hidden');
+  currentHelperId = db.helpers.length ? db.helpers[0].id : null;
+  document.getElementById('helperApp').classList.remove('hidden');
+  showHelperTab('today');
+  renderHelper();
 }
 refreshLoginHelperOptions();
 
@@ -1062,6 +1125,7 @@ function openSettingsModal(){
       <div class="field"><input id="f_newHelperPhone" placeholder="Phone (optional)"/></div>
     </div>
     <button class="btn btn-secondary" onclick="addHelper()">+ Add Helper</button>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="previewHelper()">Preview Helper View</button>
     <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
     <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This wipes every job, customer, estimate, and invoice on this device so you can start clean with your own info. Can't be undone.</p>
     <button class="btn btn-danger" onclick="confirmClearAll()">Clear All Data</button>
@@ -1477,20 +1541,13 @@ function savePartner(id){
 }
 function deletePartner(id){ db.partners = db.partners.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
 
-/* ============================================================
-   SUPABASE SETUP (next step, once you create the project):
-
-   const supabase = window.supabase.createClient(
-     'https://YOUR-PROJECT.supabase.co',
-     'YOUR-ANON-KEY'
-   );
-
-   Replace the `db` object and save/load functions above with real
-   queries, e.g.:
-     const { data } = await supabase.from('jobs').select('*, customers(name)');
-   Auth: supabase.auth.signInWithPassword({email, password})
-   Role comes from profiles.role — route to ownerApp or helperApp based on it.
-   ============================================================ */
+/* Boots straight into the Owner view once cloud data has loaded —
+   no login screen, single-user phone app connected to Supabase. */
+(async function boot(){
+  db = await loadFromCloud();
+  document.getElementById('bootLoader').classList.add('hidden');
+  enterApp('owner');
+})();
 </script>
 </body>
 </html>
