@@ -1,1747 +1,504 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Estimo — Job & Invoice Manager</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23FE7F2D'/%3E%3Ctext x='50' y='68' font-family='Georgia,serif' font-size='60' font-weight='bold' fill='%231C1E22' text-anchor='middle'%3EE%3C/text%3E%3C/svg%3E">
-<meta name="theme-color" content="#1C1E22">
-<meta name="apple-mobile-web-app-title" content="Estimo">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@600;700&family=Questrial&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Estimate</title>
 <style>
-  :root{
-    --ink:#1C1E22;
-    --ink-soft:#2A2D33;
-    --paper:#F7F5F0;
-    --paper-dim:#EDEAE2;
-    --yellow:#F5C826;
-    --yellow-deep:#D9A800;
-    --orange:#FE7F2D;
-    --charcoal:#233D4D;
-    --gold:#C9A227;
-    --blue:#2C5F7C;
-    --blue-soft:#4A7E9B;
-    --green:#3E8914;
-    --red:#C1440E;
-    --line:rgba(28,30,34,0.12);
-    --radius:14px;
-    --shadow-hard:4px 4px 0px var(--ink);
-    --hazard:repeating-linear-gradient(45deg, var(--ink), var(--ink) 9px, var(--orange) 9px, var(--orange) 18px);
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;}
-  body{
-    font-family:'Inter',sans-serif;
-    background:var(--paper);
-    color:var(--ink);
-    -webkit-font-smoothing:antialiased;
-    overscroll-behavior:none;
-  }
-  h1,h2,h3,.display{
-    font-family:'Barlow Condensed',sans-serif;
-    text-transform:uppercase;
-    letter-spacing:0.02em;
-    font-weight:700;
-    margin:0;
-  }
-  .mono{font-family:'IBM Plex Mono',monospace;}
-  .brand-font{font-family:'Big Shoulders Display',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:0.01em;}
-  #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:78px;}
-  button{font-family:inherit;}
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-  /* ---------- LOGIN ---------- */
-  .login-screen{
-    min-height:100vh;display:flex;flex-direction:column;justify-content:center;
-    padding:32px 28px;background:var(--charcoal);color:var(--paper);
+  :root {
+    --charcoal: #233D4D;
+    --orange: #FE7F2D;
+    --paper: #FFFFFF;
+    --ink: #1A1A1A;
+    --grey: #6B6B6B;
+    --line: #E4E1DA;
   }
-  .login-screen .brand{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
-  .chrome-swatch{
-    width:34px;height:34px;border-radius:50%;flex-shrink:0;
-    background:conic-gradient(from 90deg, #8a8f98, #f2f2f2, #6b6f77, #ffffff, #9a9ea5, #f2f2f2, #8a8f98);
-    border:2px solid var(--ink);
-  }
-  .login-screen h1{font-size:42px;line-height:1;color:var(--paper);}
-  .login-screen h1 .dot{color:var(--orange);}
-  .login-screen .tag{color:var(--paper);font-family:'Questrial',sans-serif;font-size:19px;letter-spacing:0.01em;margin-bottom:36px;text-transform:none;opacity:0.92;}
-  .field{margin-bottom:14px;}
-  .field label{display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;}
-  .login-screen .field label{color:rgba(247,245,240,0.6);}
-  .field input, .field select, .field textarea{
-    width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);
-    background:#fff;color:var(--ink);font-size:15px;font-family:'Inter',sans-serif;
-  }
-  .login-screen .field input{border:1.5px solid rgba(247,245,240,0.18);background:rgba(247,245,240,0.06);color:var(--paper);}
-  .field input::placeholder, .field textarea::placeholder{color:rgba(28,30,34,0.3);}
-  .field textarea{resize:vertical;min-height:70px;}
-  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .btn{
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    padding:15px 20px;border-radius:10px;border:2px solid transparent;font-size:15px;font-weight:600;
-    cursor:pointer;width:100%;font-family:'Inter',sans-serif;transition:transform .06s ease, box-shadow .06s ease;
-  }
-  .btn:active{transform:translate(2px,2px);box-shadow:none !important;}
-  .btn-primary{background:var(--orange);color:#fff;border-color:var(--ink);box-shadow:var(--shadow-hard);}
-  .btn-ghost{background:transparent;color:var(--paper);border:2px solid rgba(247,245,240,0.3);margin-top:10px;}
-  .btn-danger{background:transparent;color:var(--red);border:2px solid var(--red);}
-  .btn-secondary{background:var(--paper-dim);color:var(--ink);border-color:var(--ink);box-shadow:3px 3px 0px var(--ink);}
-  .switch-role{margin-top:22px;text-align:center;font-size:13px;color:rgba(247,245,240,0.5);}
 
-  /* ---------- TOP BAR ---------- */
-  .topbar{
-    position:sticky;top:0;z-index:10;background:var(--ink);color:var(--paper);
-    padding:18px 20px 15px;display:flex;align-items:center;justify-content:space-between;
-  }
-  .topbar .co-name{font-size:26px;}
-  .topbar .co-name .dot{color:var(--orange);}
-  .topbar .role-pill{
-    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
-    background:rgba(254,127,45,0.16);color:var(--orange);padding:4px 9px;border-radius:20px;margin-top:2px;display:inline-block;
-  }
-  .icon-btn{
-    width:38px;height:38px;border-radius:50%;background:rgba(247,245,240,0.1);border:none;
-    color:var(--paper);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-  }
-  .topbar-btn{
-    background:none;border:none;color:var(--paper);opacity:0.75;cursor:pointer;
-    font-family:'Barlow Condensed',sans-serif;font-weight:500;font-size:15px;
-    text-transform:uppercase;letter-spacing:.01em;padding:6px 4px;
-  }
-  .topbar-btn:active{opacity:1;}
+  * { box-sizing: border-box; }
 
-  /* ---------- CONTENT ---------- */
-  .content{padding:18px 18px 8px;}
-  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 12px;}
-  .section-head:first-child{margin-top:4px;}
-  .section-head h2{font-size:19px;color:var(--ink);}
-  .section-head .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.45);}
+  body {
+    margin: 0;
+    background: #F4F2EE;
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+  }
 
-  /* ---------- COMPOSITE NAV CARD (tappable squares/rectangles) ---------- */
-  .composite-card{
-    display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
-    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money" "pricebook pricebook pricebook" "partners partners partners";
-    gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:14px;
-    overflow:hidden;box-shadow:var(--shadow-hard);margin-bottom:4px;
+  .sheet {
+    width: 850px;
+    margin: 32px auto;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 10px 10px 0 var(--orange);
+    padding: 48px 52px 40px;
   }
-  .cc-cell{cursor:pointer;transition:filter .06s ease, transform .06s ease;}
-  .cc-cell:active{filter:brightness(0.92);}
-  .cc-logo{grid-area:logo;background:var(--paper);padding:18px 18px 16px;}
-  .cc-logo .cc-label{font-family:'Fredoka',sans-serif;font-size:24px;font-weight:700;text-transform:none;color:var(--ink);}
-  .cc-logo .cc-label .dot{color:var(--orange);}
-  .cc-logo .cc-sub{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:4px;}
-  .cc-chrome{grid-area:chrome;background:var(--charcoal);min-height:74px;position:relative;display:flex;align-items:flex-end;padding:9px;}
-  .cc-stripe{grid-area:stripe;background:var(--orange);min-height:88px;position:relative;display:flex;align-items:flex-end;padding:9px;}
-  .cc-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.03em;text-transform:uppercase;}
-  .cc-chrome .cc-tag{color:var(--orange);}
-  .cc-stripe .cc-tag{color:var(--ink);}
-  .cc-agenda{grid-area:agenda;background:var(--ink);color:var(--paper);padding:14px;display:flex;align-items:flex-end;min-height:80px;}
-  .cc-agenda .cc-tag{color:var(--orange);}
-  .cc-money{grid-area:money;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;min-height:170px;}
-  .cc-money .cc-money-label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:rgba(28,30,34,0.5);}
-  .cc-money .cc-gold-num{font-family:'Barlow Condensed';font-weight:800;font-size:38px;color:var(--gold);line-height:1.1;margin-top:2px;}
-  .cc-money .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);margin-top:6px;line-height:1.5;}
-  .cc-money .cc-tag{color:var(--blue);margin-top:8px;display:inline-block;}
-  .cc-pricebook{grid-area:pricebook;background:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
-  .cc-pricebook .cc-pb-label{font-size:16px;font-weight:700;color:var(--ink);}
-  .cc-pricebook .cc-tag{color:var(--blue);}
-  .cc-partners{grid-area:partners;background:var(--charcoal);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
-  .cc-partners .cc-pb-label{font-size:16px;font-weight:700;color:#fff;}
-  .cc-partners .cc-tag{color:var(--orange);}
 
-  /* ---------- MONTH CALENDAR ---------- */
-  .cal-wrap{background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-hard);padding:16px;margin-bottom:22px;}
-  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-  .cal-head h3{font-size:18px;}
-  .cal-nav-btn{width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;flex-shrink:0;}
-  .cal-nav-btn:active{background:var(--paper-dim);}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-  .cal-dow{font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:center;color:rgba(28,30,34,0.4);text-transform:uppercase;padding-bottom:6px;}
-  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
-    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;cursor:pointer;
-    border:2px solid transparent;position:relative;color:var(--ink);background:var(--paper-dim);}
-  .cal-day.empty{visibility:hidden;cursor:default;}
-  .cal-day.has-job{background:var(--orange);color:#fff;}
-  .cal-day.blocked{background:var(--orange);color:#fff;}
-  .cal-day.today{border-color:var(--ink);}
-  .cal-day.selected{outline:2px solid var(--blue);outline-offset:1px;}
-  .cal-day:active{transform:scale(0.92);}
-  .cal-daypanel{margin-top:14px;padding-top:14px;border-top:1.5px dashed var(--line);}
-  .cal-daypanel h4{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:rgba(28,30,34,0.5);margin-bottom:10px;}
+  /* ---- HEADER ---- */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 4px solid var(--ink);
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-mark {
+    width: 54px; height: 54px;
+    background: var(--charcoal);
+    border: 3px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 4px 4px 0 var(--orange);
+    flex-shrink: 0;
+  }
+  .brand-mark span {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    color: #fff;
+    font-size: 20px;
+  }
+  .brand-name {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 24px;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .brand-sub {
+    font-size: 12px;
+    color: var(--grey);
+    margin-top: 4px;
+    letter-spacing: 0.3px;
+  }
+  .invoice-tag {
+    text-align: right;
+  }
+  .invoice-tag .label {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 30px;
+    color: var(--orange);
+    letter-spacing: 1px;
+    -webkit-text-stroke: 1px var(--ink);
+  }
+  .invoice-tag .num {
+    font-size: 13px;
+    color: var(--grey);
+    margin-top: 2px;
+    font-weight: 600;
+  }
 
-  /* ---------- BREAKDOWN PAGE (bento-style percentage cards) ---------- */
-  .breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .breakdown-card{
-    border-radius:20px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;
-    border:2px solid var(--ink);box-shadow:3px 3px 0px var(--ink);
+  /* ---- META GRID ---- */
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
   }
-  .breakdown-card h4{font-size:15px;font-weight:700;font-family:'Inter';}
-  .breakdown-card .bd-sub{font-size:11px;opacity:.75;margin-top:3px;font-family:'IBM Plex Mono',monospace;}
-  .breakdown-card .bd-pct{font-family:'Barlow Condensed';font-weight:800;font-size:46px;line-height:1;margin-top:18px;}
-  .bd-h1{min-height:230px;}
-  .bd-h2{min-height:165px;}
-  .bd-h3{min-height:205px;}
-  .bd-h4{min-height:145px;}
-  .cc-content{grid-area:content;background:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;}
-  .cc-content .cc-title{font-family:'Barlow Condensed';font-size:22px;font-weight:800;text-transform:uppercase;color:var(--ink);}
-  .cc-content .cc-desc{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(28,30,34,0.55);margin-top:5px;line-height:1.5;}
+  .meta-block {
+    border: 2px solid var(--ink);
+    padding: 14px 16px;
+    background: #FAF9F6;
+  }
+  .meta-block .k {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--grey);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .meta-block .v {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  .meta-row .k2 { color: var(--grey); font-weight: 600; }
+  .meta-row .v2 { font-weight: 700; }
 
-  /* ---------- PULSE (status breakdown) ---------- */
-  .pulse-card{
-    background:#fff;border:2px solid var(--ink);border-radius:var(--radius);padding:16px;margin-bottom:14px;
-    box-shadow:3px 3px 0px var(--ink);cursor:pointer;transition:transform .06s ease, box-shadow .06s ease;
+  /* ---- STATUS CHIP ---- */
+  .chip {
+    display: inline-block;
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border: 2px solid var(--ink);
+    background: var(--orange);
+    color: var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
   }
-  .pulse-card:active{transform:translate(2px,2px);box-shadow:1px 1px 0px var(--ink);}
-  .pulse-card .pulse-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
-  .pulse-card .pulse-head h3{font-size:15px;color:var(--ink);}
-  .pulse-card .pulse-head .total{font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.45);}
-  .pulse-bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--paper-dim);margin-bottom:10px;}
-  .pulse-bar .seg{height:100%;}
-  .pulse-legend{display:flex;flex-wrap:wrap;gap:10px 14px;}
-  .pulse-legend .item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(28,30,34,0.65);font-family:'IBM Plex Mono',monospace;}
-  .pulse-legend .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
-  /* ---------- WORK TICKET CARD ---------- */
-  .ticket{
-    position:relative;background:#fff;border-radius:var(--radius);
-    border:2px solid var(--ink);margin-bottom:14px;overflow:hidden;
-    display:flex;cursor:pointer;box-shadow:4px 4px 0px var(--ink);transition:transform .06s ease, box-shadow .06s ease;
+  /* ---- LINE ITEMS ---- */
+  table.items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    border: 2px solid var(--ink);
   }
-  .ticket:active{transform:translate(2px,2px);box-shadow:1px 1px 0px var(--ink);}
-  .ticket .stripe{width:10px;flex-shrink:0;background:var(--blue);}
-  .ticket.status-scheduled .stripe, .ticket.status-sent .stripe, .ticket.status-draft .stripe{background:var(--blue);}
-  .ticket.status-in_progress .stripe{background:var(--orange);}
-  .ticket.status-paused .stripe{background:#8a8f98;}
-  .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
-  .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
-  .ticket .punch-hole{
-    position:absolute;left:-7px;top:50%;transform:translateY(-50%);
-    width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);
+  table.items thead th {
+    background: var(--ink);
+    color: #fff;
+    font-family: 'Archivo Expanded', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 10px 14px;
+    text-align: left;
   }
-  .ticket-body{padding:14px 16px 14px 18px;flex:1;min-width:0;}
-  .ticket-body .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-  .ticket-body .job-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Inter';}
-  .ticket-body .customer{font-size:13px;color:rgba(28,30,34,0.55);margin-top:2px;}
-  .ticket-body .meta-row{display:flex;gap:14px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(28,30,34,0.55);flex-wrap:wrap;}
-  .status-tag{
-    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.04em;text-transform:uppercase;
-    padding:4px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;border:1.5px solid transparent;
+  table.items thead th.amt { text-align: right; }
+  table.items tbody td {
+    padding: 14px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+    vertical-align: top;
   }
-  .status-tag.scheduled, .status-tag.sent, .status-tag.draft{background:rgba(44,95,124,0.1);color:var(--blue);border-color:var(--blue);}
-  .status-tag.in_progress{background:rgba(232,93,44,0.1);color:var(--orange);border-color:var(--orange);}
-  .status-tag.paused{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;}
-  .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.1);color:var(--green);border-color:var(--green);}
-  .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);border-color:var(--red);}
+  table.items tbody td.amt {
+    text-align: right;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  table.items tbody .desc-title { font-weight: 700; margin-bottom: 4px; }
+  table.items tbody .desc-sub { color: var(--grey); font-size: 12.5px; line-height: 1.5; }
+  table.items tbody tr:nth-child(even) { background: #FAF9F6; }
 
-  .empty-state{ text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4); }
-  .empty-state .glyph{font-size:32px;margin-bottom:8px;}
-  .empty-state p{font-size:14px;margin:0;}
+  /* ---- SCOPE OF WORK ---- */
+  .scope-head {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--ink);
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .scope-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 36px;
+    margin-bottom: 26px;
+  }
+  .scope-cat {
+    margin-bottom: 16px;
+    break-inside: avoid;
+  }
+  .scope-cat .cat-title {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 5px;
+    padding-left: 10px;
+    border-left: 3px solid var(--orange);
+  }
+  .scope-cat ul {
+    margin: 0;
+    padding: 0 0 0 10px;
+    list-style: none;
+  }
+  .scope-cat li {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink);
+    position: relative;
+    padding-left: 12px;
+  }
+  .scope-cat li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--grey);
+  }
 
-  .fab{
-    position:fixed;bottom:92px;right:calc(50% - 240px + 20px);
-    width:58px;height:58px;border-radius:50%;background:var(--orange);color:#fff;
-    border:2px solid var(--ink);font-size:26px;box-shadow:4px 4px 0px var(--ink);cursor:pointer;
-    display:flex;align-items:center;justify-content:center;z-index:20;transition:transform .06s ease, box-shadow .06s ease;
+  /* ---- SCOPE CHANGE BOX ---- */
+  .notice {
+    border: 2px dashed var(--orange);
+    background: #FFF6EE;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    font-size: 12.5px;
   }
-  .fab:active{transform:translate(2px,2px);box-shadow:1px 1px 0px var(--ink);}
-  @media (max-width:480px){ .fab{right:20px;} }
+  .notice .t {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .notice b { color: var(--ink); }
 
-  /* ---------- BOTTOM NAV ---------- */
-  .bottomnav{
-    position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
-    background:#fff;border-top:1.5px solid var(--line);display:flex;
-    padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:15;
+  /* ---- TOTALS ---- */
+  .totals {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 30px;
   }
-  .navbtn{
-    flex:1;display:flex;align-items:center;justify-content:center;
-    background:none;border:none;cursor:pointer;color:rgba(28,30,34,0.4);padding:10px 2px;
+  .totals-box {
+    width: 320px;
+    border: 2px solid var(--ink);
   }
-  .navbtn .lb{font-size:15px;font-family:'Barlow Condensed',sans-serif;font-weight:500;letter-spacing:.01em;text-transform:uppercase;}
-  .navbtn.active{color:var(--ink);}
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--line);
+  }
+  .totals-row .k { color: var(--grey); font-weight: 600; }
+  .totals-row .v { font-weight: 700; }
+  .totals-row.grand {
+    background: var(--charcoal);
+    border-bottom: none;
+  }
+  .totals-row.grand .k, .totals-row.grand .v {
+    color: #fff;
+    font-family: 'Archivo Expanded', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+  }
+  .totals-row.due .v { color: var(--orange); }
 
-  .helper-clock{
-    background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:22px;text-align:center;margin-bottom:20px;
+  /* ---- APPROVAL ---- */
+  .approval {
+    border: 2px solid var(--ink);
+    background: #FAF9F6;
+    padding: 20px 24px;
+    margin-bottom: 26px;
   }
-  .helper-clock .status{font-family:'IBM Plex Mono',monospace;font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.05em;}
-  .helper-clock .time{font-family:'Barlow Condensed';font-size:38px;margin:6px 0 16px;}
-  .helper-clock .btn-primary{max-width:220px;margin:0 auto;}
+  .approval-head {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--charcoal);
+    margin-bottom: 8px;
+  }
+  .approval-text {
+    font-size: 12px;
+    color: var(--grey);
+    line-height: 1.6;
+    margin-bottom: 22px;
+  }
+  .approval-sign {
+    display: flex;
+    gap: 40px;
+  }
+  .sign-block { flex: 1; }
+  .sign-line {
+    border-bottom: 2px solid var(--ink);
+    height: 34px;
+  }
+  .sign-label {
+    font-size: 11px;
+    color: var(--grey);
+    font-weight: 600;
+    margin-top: 6px;
+  }
 
-  /* ---------- MODAL / SHEET ---------- */
-  .overlay{
-    position:fixed;inset:0;background:rgba(28,30,34,0.45);z-index:50;
-    display:flex;align-items:flex-end;justify-content:center;
+  /* ---- FOOTER ---- */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-top: 3px solid var(--ink);
+    padding-top: 20px;
   }
-  .sheet{
-    background:var(--paper);width:100%;max-width:480px;border-radius:20px 20px 0 0;
-    max-height:88vh;overflow-y:auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom));
-    border-top:2px solid var(--ink);
+  .footer .terms {
+    font-size: 11.5px;
+    color: var(--grey);
+    max-width: 440px;
+    line-height: 1.6;
   }
-  .sheet-handle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 16px;}
-  .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-  .sheet-head h2{font-size:20px;}
-  .sheet-close{background:none;border:none;font-size:22px;color:rgba(28,30,34,0.4);cursor:pointer;padding:4px;}
-  .line-item-row{display:grid;grid-template-columns:1fr 55px 75px 28px;gap:6px;margin-bottom:8px;align-items:center;}
-  .line-item-row input{padding:10px;font-size:13px;}
-  .remove-li{background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;}
-  .add-li-btn{background:none;border:1.5px dashed var(--line);border-radius:8px;padding:10px;width:100%;color:rgba(28,30,34,0.5);font-size:13px;cursor:pointer;margin-bottom:14px;}
-  .li-total{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;margin-bottom:16px;}
-  .menu-option{
-    display:flex;align-items:center;gap:12px;padding:16px;background:#fff;border:1.5px solid var(--line);
-    border-radius:12px;margin-bottom:10px;cursor:pointer;font-size:15px;font-weight:600;
+  .footer .pay {
+    text-align: right;
+    font-size: 12.5px;
   }
-  .menu-option .ic{font-size:20px;}
-
-  /* ---------- iOS-style action sheet ---------- */
-  .action-overlay{
-    position:fixed;inset:0;background:rgba(28,30,34,0.4);z-index:50;
-    display:flex;align-items:flex-end;justify-content:center;padding:0 8px calc(8px + env(safe-area-inset-bottom));
-  }
-  .action-wrap{width:100%;max-width:480px;}
-  .action-group{background:rgba(247,245,240,0.96);backdrop-filter:blur(10px);border-radius:14px;overflow:hidden;margin-bottom:8px;border:2px solid var(--ink);}
-  .action-title{padding:12px 16px 10px;text-align:center;font-size:12px;color:rgba(28,30,34,0.5);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--ink);}
-  .action-row{padding:16px;text-align:center;color:var(--blue);font-weight:700;font-size:17px;cursor:pointer;border-bottom:1.5px solid var(--line);}
-  .action-row:last-child{border-bottom:none;}
-  .action-row:active{background:rgba(28,30,34,0.06);}
-  .action-cancel{background:rgba(247,245,240,0.96);backdrop-filter:blur(10px);border-radius:14px;padding:16px;text-align:center;font-weight:700;font-size:17px;color:var(--ink);cursor:pointer;border:2px solid var(--ink);}
-
-  .hidden{display:none !important;}
-  ::-webkit-scrollbar{display:none;}
+  .footer .pay .k { font-weight: 700; margin-bottom: 4px; }
 </style>
 </head>
 <body>
 
-<div id="app">
+<div class="sheet">
 
-  <div id="bootLoader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--charcoal);color:var(--paper);font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.05em;text-transform:uppercase;opacity:0.7;">
-    Loading your data...
-  </div>
-
-  <!-- ===================== LOGIN ===================== -->
-  <div id="loginScreen" class="login-screen">
-    <h1 class="brand-font" style="color:var(--paper);font-size:36px;margin-bottom:8px;">ESTIMO<span class="dot">.</span></h1>
-    <div class="tag" style="margin-top:0;">Jobs · Quotes · Invoices — one app</div>
-
-    <div class="field">
-      <label>Email</label>
-      <input id="authEmail" type="email" placeholder="you@yourcompany.com"/>
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input id="authPassword" type="password" placeholder="••••••••"/>
-    </div>
-    <div id="authError" style="color:#ff8a6b;font-size:13px;margin-bottom:12px;display:none;"></div>
-    <button class="btn btn-primary" id="authPrimaryBtn" onclick="handleLogIn()">Log In</button>
-    <button class="btn btn-ghost" onclick="handleSignUp()">Create New Account</button>
-    <div class="switch-role">Your own private data — nobody else can see it.</div>
-  </div>
-
-  <!-- ===================== OWNER APP ===================== -->
-  <div id="ownerApp" class="hidden">
-    <div class="topbar">
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark"><span>407</span></div>
       <div>
-        <div class="co-name brand-font" id="ownerCoName">407 RENOVATIONS<span class="dot">.</span></div>
-      </div>
-      <div style="display:flex;gap:14px;">
-        <button class="topbar-btn" onclick="openSettingsModal()">Settings</button>
-        <button class="topbar-btn" onclick="logout()">Log Out</button>
+        <div class="brand-name">407 RENOVATIONS</div>
+        <div class="brand-sub">Javier Flores, Owner &nbsp;•&nbsp; 2347 Quaker Ct, Orlando, FL 32837</div>
+        <div class="brand-sub">(407) 432-1935 &nbsp;•&nbsp; javierflmx@me.com</div>
       </div>
     </div>
-
-    <!-- DASHBOARD -->
-    <div id="ownerTab-dashboard" class="content tabpane">
-      <div class="composite-card">
-        <div class="cc-cell cc-logo" onclick="showOwnerTab('jobs')">
-          <div class="cc-label">JOBS<span class="dot">.</span></div>
-          <div class="cc-sub mono" id="ccJobsSub">0 open</div>
-        </div>
-        <div class="cc-cell cc-chrome" onclick="openAddMenu()"><span class="cc-tag">→ New</span></div>
-        <div class="cc-cell cc-stripe" onclick="showOwnerTab('customers')"><span class="cc-tag">→ Customers</span></div>
-        <div class="cc-cell cc-money" onclick="showOwnerTab('money')">
-          <div class="cc-money-label">Money Coming</div>
-          <div class="cc-gold-num" id="ccGoldNum">$0</div>
-          <div class="cc-desc" id="ccMoneySub">$0 open invoices</div>
-          <span class="cc-tag">→ See invoices &amp; estimates</span>
-        </div>
-        <div class="cc-cell cc-agenda" onclick="openAgenda()">
-          <span class="cc-tag">Agenda</span>
-        </div>
-        <div class="cc-cell cc-pricebook" onclick="openPriceBook()">
-          <span class="cc-pb-label">Price Book</span>
-          <span class="cc-tag">→ See items</span>
-        </div>
-        <div class="cc-cell cc-partners" onclick="openPartners()">
-          <span class="cc-pb-label">Partners</span>
-          <span class="cc-tag">→ See contacts</span>
-        </div>
-      </div>
-
-      <div class="section-head"><h2>Pulse</h2><span class="count">how it's going</span></div>
-      <div id="pulseJobs" class="pulse-card" onclick="openBreakdown('jobs')"></div>
-      <div id="pulseEstimates" class="pulse-card" onclick="openBreakdown('estimates')"></div>
-      <div id="pulseInvoices" class="pulse-card" onclick="openBreakdown('invoices')"></div>
-
-      <div class="section-head"><h2>Today</h2><span class="count" id="todayCount"></span></div>
-      <div id="todayList"></div>
-      <div class="section-head"><h2>Up Next</h2></div>
-      <div id="upcomingList"></div>
-    </div>
-
-    <!-- JOBS -->
-    <div id="ownerTab-jobs" class="content tabpane hidden">
-      <div class="section-head"><h2>All Jobs</h2><span class="count" id="jobsCount"></span></div>
-      <div id="jobsList"></div>
-    </div>
-
-    <!-- CUSTOMERS -->
-    <div id="ownerTab-customers" class="content tabpane hidden">
-      <div class="section-head"><h2>Leads</h2><span class="count" id="leadsCount"></span></div>
-      <div id="leadsList"></div>
-      <div class="section-head"><h2>Customers</h2><span class="count" id="customersCount"></span></div>
-      <div id="customersList"></div>
-    </div>
-
-    <!-- MONEY (estimates + invoices) -->
-    <div id="ownerTab-money" class="content tabpane hidden">
-      <div class="section-head"><h2>Estimates</h2><span class="count" id="estimatesCount"></span></div>
-      <div id="estimatesList"></div>
-      <div class="section-head"><h2>Invoices</h2><span class="count" id="invoicesCount"></span></div>
-      <div id="invoicesList"></div>
-    </div>
-
-    <!-- AGENDA (full page, opened only from the composite tile) -->
-    <div id="ownerTab-agenda" class="content tabpane hidden">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
-        <h2 style="font-size:20px;">Agenda</h2>
-      </div>
-
-      <div class="cal-wrap">
-        <div class="cal-head">
-          <button class="cal-nav-btn" onclick="calPrevMonth()">‹</button>
-          <h3 id="calMonthLabel">Month Year</h3>
-          <button class="cal-nav-btn" onclick="calNextMonth()">›</button>
-        </div>
-        <div class="cal-grid" style="margin-bottom:4px;">
-          <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div><div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
-        </div>
-        <div class="cal-grid" id="calGrid"></div>
-        <div class="cal-daypanel" id="calDayPanel"></div>
-      </div>
-
-      <div id="agendaList"></div>
-    </div>
-
-    <!-- BREAKDOWN (percentage bento page, opened from a Pulse card) -->
-    <div id="ownerTab-breakdown" class="content tabpane hidden">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
-        <h2 style="font-size:20px;" id="breakdownTitle">Breakdown</h2>
-      </div>
-      <div class="breakdown-grid" id="breakdownGrid"></div>
-    </div>
-
-    <!-- PRICE BOOK (full page, opened from its tile) -->
-    <div id="ownerTab-pricebook" class="content tabpane hidden">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
-        <h2 style="font-size:20px;flex:1;">Price Book <span class="count" id="priceBookCount"></span></h2>
-        <button class="icon-btn" style="background:var(--orange);color:#fff;border:2px solid var(--ink);" onclick="openPriceItemModal()">+</button>
-      </div>
-      <div id="priceBookList"></div>
-    </div>
-
-    <!-- PARTNERS (referral rolodex, full page) -->
-    <div id="ownerTab-partners" class="content tabpane hidden">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <button class="icon-btn" style="background:var(--paper-dim);color:var(--ink);border:2px solid var(--ink);" onclick="showOwnerTab('dashboard')">←</button>
-        <h2 style="font-size:20px;flex:1;">Partners <span class="count" id="partnersCount"></span></h2>
-        <button class="icon-btn" style="background:var(--orange);color:#fff;border:2px solid var(--ink);" onclick="openPartnerModal()">+</button>
-      </div>
-      <div id="partnersList"></div>
-    </div>
-
-    <button class="fab" onclick="openAddMenu()">+</button>
-
-    <div class="bottomnav">
-      <button class="navbtn active" data-tab="dashboard" onclick="showOwnerTab('dashboard')"><span class="lb">Home</span></button>
-      <button class="navbtn" data-tab="jobs" onclick="showOwnerTab('jobs')"><span class="lb">Jobs</span></button>
-      <button class="navbtn" data-tab="customers" onclick="showOwnerTab('customers')"><span class="lb">Customers</span></button>
-      <button class="navbtn" data-tab="money" onclick="showOwnerTab('money')"><span class="lb">Money</span></button>
+    <div class="invoice-tag">
+      <div class="label">ESTIMATE</div>
+      <div class="num">No. {{estimate_number}}</div>
     </div>
   </div>
 
-  <!-- ===================== HELPER APP ===================== -->
-  <div id="helperApp" class="hidden">
-    <div class="topbar">
-      <div>
-        <div class="co-name brand-font">MY JOBS</div>
-        <div id="helperNameTag" class="mono" style="font-size:11px;opacity:0.6;margin-top:2px;letter-spacing:.04em;text-transform:uppercase;"></div>
-      </div>
-      <button class="topbar-btn" onclick="logout()">Log Out</button>
+  <div class="meta">
+    <div class="meta-block">
+      <div class="k">Bill To</div>
+      <div class="v">{{client_name}}<br>{{project_address}}</div>
     </div>
-
-    <div id="helperTab-today" class="content">
-      <div class="helper-clock">
-        <div class="status" id="clockStatus">Clocked Out</div>
-        <div class="time" id="clockTime">--:--</div>
-        <button class="btn btn-primary" id="clockBtn" onclick="toggleClock()">Clock In</button>
-      </div>
-      <div class="section-head"><h2>Today's Jobs</h2></div>
-      <div id="helperJobsList"></div>
-    </div>
-
-    <div id="helperTab-photos" class="content hidden">
-      <div class="section-head"><h2>Photos</h2><span class="count">today's jobs</span></div>
-      <div id="helperPhotosList"></div>
-    </div>
-
-    <div id="helperTab-profile" class="content hidden">
-      <div class="section-head"><h2>Profile</h2></div>
-      <div id="helperProfileBox"></div>
-    </div>
-
-    <div class="bottomnav">
-      <button class="navbtn active" data-htab="today" onclick="showHelperTab('today')"><span class="lb">Today</span></button>
-      <button class="navbtn" data-htab="photos" onclick="showHelperTab('photos')"><span class="lb">Photos</span></button>
-      <button class="navbtn" data-htab="profile" onclick="showHelperTab('profile')"><span class="lb">Profile</span></button>
+    <div class="meta-block">
+      <div class="meta-row"><span class="k2">Estimate Date</span><span class="v2">{{estimate_date}}</span></div>
+      <div class="meta-row"><span class="k2">Valid Until</span><span class="v2">{{valid_until}}</span></div>
+      <div class="meta-row"><span class="k2">Project</span><span class="v2">Salon Build-Out, {{sqft}} SF</span></div>
+      <div class="meta-row"><span class="k2">Est. Completion</span><span class="v2">{{completion_date}}</span></div>
+      <div class="meta-row"><span class="k2">Status</span><span class="v2"><span class="chip">{{status}}</span></span></div>
     </div>
   </div>
-  <input type="file" id="helperPhotoInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelected(event)"/>
 
-  <!-- ===================== MODAL ROOT ===================== -->
-  <div id="modalRoot"></div>
-  <div id="pickerRoot"></div>
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:72%">Description</th>
+        <th class="amt" style="width:28%">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="desc-title">Salon Renovation — Full Scope of Work</div>
+          <div class="desc-sub">See full itemized scope of work below.</div>
+        </td>
+        <td class="amt">{{estimate_total}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="scope-head">Project Scope of Work</div>
+  <div class="scope-grid">
+    <div>
+      <div class="scope-cat">
+        <div class="cat-title">Demolition</div>
+        <ul>
+          <li>Remove existing carpet throughout</li>
+          <li>Remove old, unsafe electrical wiring left by the previous tenant</li>
+        </ul>
+      </div>
+      <div class="scope-cat">
+        <div class="cat-title">Walls &amp; Framing</div>
+        <ul>
+          <li>Build and reconfigure walls to create the 2 shampoo/bowl sink rooms</li>
+          <li>Build the new nail room</li>
+          <li>Rework the large accent wall to create a dedicated TV wall section</li>
+          <li>Install a custom 48" door for access to the bathroom and back hallway</li>
+        </ul>
+      </div>
+      <div class="scope-cat">
+        <div class="cat-title">Flooring</div>
+        <ul>
+          <li>Replace flooring throughout — approx. {{sqft}} sf</li>
+        </ul>
+      </div>
+      <div class="scope-cat">
+        <div class="cat-title">Ceiling</div>
+        <ul>
+          <li>Remove the existing 24"x48" halogen panel fixtures and replace throughout</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="scope-cat">
+        <div class="cat-title">Electrical</div>
+        <ul>
+          <li>Fix and bring all electrical up to a modern standard throughout</li>
+          <li>Replace all switches with modern smart switches</li>
+          <li>Add LED lighting throughout for a modern, smart look</li>
+          <li>Install a long LED track lighting run</li>
+        </ul>
+      </div>
+      <div class="scope-cat">
+        <div class="cat-title">HVAC</div>
+        <ul>
+          <li>Move ductwork to bring A/C service to the 2 new rooms</li>
+        </ul>
+      </div>
+      <div class="scope-cat">
+        <div class="cat-title">Plumbing</div>
+        <ul>
+          <li>Renovate the bathroom</li>
+          <li>Plumbing for the 2 bowl sink rooms</li>
+          <li>Add plumbing for the laundry area</li>
+        </ul>
+      </div>
+      <div class="scope-cat">
+        <div class="cat-title">Custom Carpentry &amp; Millwork</div>
+        <ul>
+          <li>Custom wall paneling in 3 rooms plus the large accent wall</li>
+          <li>Build the European-style color-mixing "kitchen" area</li>
+          <li>Build a short 36" tall wall to define the 5-seat styling area</li>
+          <li>Install 6" baseboards throughout</li>
+          <li>Finish remaining walls (without paneling) with a smooth look</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <div class="t">Deposit to Begin Work</div>
+    <b>{{deposit_amount}}</b> required to schedule and begin this project. Remaining balance is paid in milestone payments tied to project phases, outlined once this estimate is approved.
+  </div>
+
+  <div class="totals">
+    <div class="totals-box">
+      <div class="totals-row"><span class="k">Estimated Total</span><span class="v">{{estimate_total}}</span></div>
+      <div class="totals-row due"><span class="k">Deposit to Start</span><span class="v">{{deposit_amount}}</span></div>
+      <div class="totals-row grand"><span class="k">Total</span><span class="v">{{estimate_total}}</span></div>
+    </div>
+  </div>
+
+  <div class="approval">
+    <div class="approval-head">Approval to Proceed</div>
+    <div class="approval-text">By signing below, client approves the scope of work and total estimated price above, and authorizes 407 Renovations to proceed per the terms outlined. This estimate is valid until {{valid_until}}; pricing may be subject to change after this date.</div>
+    <div class="approval-sign">
+      <div class="sign-block">
+        <div class="sign-line"></div>
+        <div class="sign-label">Client Signature / Date</div>
+      </div>
+      <div class="sign-block">
+        <div class="sign-line"></div>
+        <div class="sign-label">Javier Flores — 407 Renovations / Date</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="terms">
+      This estimate reflects the full project scope described above. It is not an itemized accounting of materials or labor costs, and is subject to the terms of the signed project agreement once approved.
+      <br><br>
+      {{license_line}}
+    </div>
+    <div class="pay">
+      <div class="k">Javier Flores</div>
+      <div>407 Renovations</div>
+      <div>2347 Quaker Ct, Orlando, FL 32837</div>
+      <div>javierflmx@me.com &nbsp;•&nbsp; (407) 432-1935</div>
+    </div>
+  </div>
 
 </div>
 
-<script>
-/* ============================================================
-   DATA LAYER — persisted to localStorage on this device.
-   Swap this for real Supabase queries once you connect a
-   project (see SUPABASE SETUP note near the bottom).
-   ============================================================ */
-const STORAGE_KEY = 'ticket_app_data_v1';
-function todayPlus(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().slice(0,10); }
-function formatWhen(dateStr, timeStr){
-  if(!dateStr) return timeStr || 'Unscheduled';
-  let label;
-  if(dateStr===todayPlus(0)) label='Today';
-  else if(dateStr===todayPlus(1)) label='Tomorrow';
-  else if(dateStr===todayPlus(-1)) label='Yesterday';
-  else label = new Date(dateStr+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  return timeStr ? `${label} · ${timeStr}` : label;
-}
-
-const seedData = {
-  customers: [
-    {id:1, name:"Maria Gomez", phone:"(407) 555-0142", email:"maria@example.com", address:"1420 Lakeview Dr, Orlando FL", notes:""},
-    {id:2, name:"Tom Reyes", phone:"(407) 555-0198", email:"", address:"88 Palmetto St, Winter Park FL", notes:""},
-    {id:3, name:"Lisa Chen", phone:"(321) 555-0110", email:"", address:"305 Bay Hill Rd, Orlando FL", notes:""},
-  ],
-  jobs: [
-    {id:1, title:"Kitchen remodel", customerId:1, status:"in_progress", time:"9:00 AM", date:todayPlus(0), address:"1420 Lakeview Dr", notes:""},
-    {id:2, title:"Bathroom tile repair", customerId:2, status:"scheduled", time:"1:30 PM", date:todayPlus(0), address:"88 Palmetto St", notes:""},
-    {id:3, title:"Deck framing estimate walk", customerId:3, status:"scheduled", time:"10:00 AM", date:todayPlus(1), address:"305 Bay Hill Rd", notes:""},
-    {id:4, title:"Fence repair", customerId:2, status:"completed", time:"", date:todayPlus(-1), address:"88 Palmetto St", notes:""},
-    {id:5, title:"Cabinet install", customerId:1, status:"invoiced", time:"", date:todayPlus(-7), address:"1420 Lakeview Dr", notes:""},
-  ],
-  estimates: [
-    {id:1, customerId:3, status:"sent", items:[{name:"Deck framing", qty:1, price:4200}]},
-    {id:2, customerId:1, status:"draft", items:[{name:"Cabinet hardware", qty:1, price:1150}]},
-  ],
-  invoices: [
-    {id:1, customerId:1, status:"sent", due:"2026-09-02", items:[{name:"Cabinet install", qty:1, price:2800}]},
-  ],
-  priceBook: [
-    {id:1, name:"Interior stairs (per flight)", unit:"each", price:850},
-    {id:2, name:"Tile installation", unit:"sq ft", price:8},
-    {id:3, name:"Cabinet install", unit:"each", price:150},
-    {id:4, name:"Interior paint", unit:"sq ft", price:2.5},
-  ],
-  partners: [
-    {id:1, name:"Ray Delgado", trade:"Plumber", phone:"(407) 555-0133", notes:"Fast for bathroom rough-ins, licensed."},
-    {id:2, name:"Sunbelt Electric", trade:"Electrician", phone:"(407) 555-0164", notes:"Panel upgrades and rewires."},
-  ],
-  leads: [
-    {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
-  ],
-  settings: { companyName:"407 Renovations", ownerName:"Javier" },
-  availability: [],
-  helpers: [],
-  nextId: 100
-};
-
-/* ============================================================
-   SUPABASE — cloud storage for Estimo. No login: this app uses
-   the publishable key with real accounts (Supabase Auth), so each
-   person's data is private and syncs to the cloud automatically.
-   ============================================================ */
-const supabaseClient = window.supabase.createClient(
-  'https://wbuxwlcbsbhpviutmjsi.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidXh3bGNic2JocHZpdXRtanNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NzIwODQsImV4cCI6MjEwNjA0ODA4NH0.tukYhD4tf4fPhwz2FqE-aeJxA23oUjfofmQ5UGOklhE'
-);
-let currentUserId = null;
-
-let db = JSON.parse(JSON.stringify(seedData));
-
-function loadLocalCache(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      const parsed = JSON.parse(raw);
-      parsed.leads = parsed.leads || [];
-      parsed.settings = parsed.settings || { companyName:"My Company", ownerName:"" };
-      parsed.availability = parsed.availability || [];
-      parsed.priceBook = parsed.priceBook || [];
-      parsed.partners = parsed.partners || [];
-      parsed.helpers = parsed.helpers || [];
-      return parsed;
-    }
-  }catch(e){}
-  return null;
-}
-
-async function loadFromCloud(){
-  try{
-    const { data, error } = await supabaseClient
-      .from('estimo_data')
-      .select('data')
-      .eq('id', currentUserId)
-      .maybeSingle();
-    if(error) throw error;
-    if(data && data.data){
-      const cloudDb = data.data;
-      cloudDb.leads = cloudDb.leads || [];
-      cloudDb.settings = cloudDb.settings || { companyName:"My Company", ownerName:"" };
-      cloudDb.availability = cloudDb.availability || [];
-      cloudDb.priceBook = cloudDb.priceBook || [];
-      cloudDb.partners = cloudDb.partners || [];
-      cloudDb.helpers = cloudDb.helpers || [];
-      return cloudDb;
-    }
-    // No row yet — brand new account. Start empty, not with someone else's demo data.
-    const initial = freshBlankData();
-    await supabaseClient.from('estimo_data').upsert({ id: currentUserId, data: initial });
-    return initial;
-  }catch(e){
-    console.error('Cloud load failed, using local cache:', e);
-    return loadLocalCache() || freshBlankData();
-  }
-}
-function freshBlankData(){
-  return {
-    customers: [], jobs: [], leads: [], estimates: [], invoices: [],
-    settings: { companyName:"My Company", ownerName:"" },
-    availability: [], priceBook: [], partners: [], helpers: [], nextId: 1
-  };
-}
-
-function saveData(){
-  // Instant local cache so the UI never waits on the network.
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  // Fire-and-forget sync to the cloud, scoped to this account only.
-  if(!currentUserId) return;
-  supabaseClient.from('estimo_data').upsert({ id: currentUserId, data: db, updated_at: new Date().toISOString() })
-    .then(({error}) => { if(error) console.error('Cloud save failed:', error); });
-}
-function newId(){ return db.nextId++; }
-function customerName(id){ const c=db.customers.find(c=>c.id===id); return c ? c.name : 'No customer'; }
-function itemsTotal(items){ return items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.price)||0),0); }
-
-function statusLabel(s){ return s.replace('_',' '); }
-
-/* ---------- TICKET CARD RENDERERS ---------- */
-function ticketHTML(job){
-  return `
-  <div class="ticket status-${job.status}" onclick="openJobModal(${job.id})">
-    <div class="stripe"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body">
-      <div class="top-row">
-        <div>
-          <div class="job-title">${job.title}</div>
-          <div class="customer">${customerName(job.customerId)}</div>
-        </div>
-        <span class="status-tag ${job.status}">${statusLabel(job.status)}</span>
-      </div>
-      <div class="meta-row">
-        <span>🕐 ${formatWhen(job.date, job.time)}</span>
-        <span>📍 ${job.address||'—'}</span>
-        ${helperName(job.helperId)?`<span>👤 ${helperName(job.helperId)}</span>`:''}
-        ${job.items && job.items.length ? `<span class="mono">$${itemsTotal(job.items).toLocaleString()}</span>` : ''}
-      </div>
-    </div>
-  </div>`;
-}
-function helperTicketHTML(job){
-  const canStart = job.status==='scheduled';
-  const canPause = job.status==='in_progress';
-  const canComplete = job.status==='in_progress'||job.status==='paused';
-  const canResume = job.status==='paused';
-  return `
-  <div class="ticket status-${job.status}">
-    <div class="stripe"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body">
-      <div class="top-row">
-        <div>
-          <div class="job-title">${job.title}</div>
-          <div class="customer">${customerName(job.customerId)}</div>
-        </div>
-        <span class="status-tag ${job.status}">${statusLabel(job.status)}</span>
-      </div>
-      <div class="meta-row">
-        <span>🕐 ${formatWhen(job.date, job.time)}</span>
-        <span>📍 ${job.address||'—'}</span>
-      </div>
-      ${job.notes?`<div class="meta-row" style="margin-top:6px;"><span style="font-family:'Inter';font-size:12.5px;color:rgba(28,30,34,0.6);">${job.notes}</span></div>`:''}
-      ${canStart||canPause||canComplete||canResume?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-        ${canStart?`<button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'in_progress')">Start Job</button>`:''}
-        ${canResume?`<button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'in_progress')">Resume</button>`:''}
-        ${canPause?`<button class="btn btn-secondary" style="flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'paused')">Pause</button>`:''}
-        ${canComplete?`<button class="btn btn-secondary" style="flex:1;" onclick="event.stopPropagation();helperSetJobStatus(${job.id},'completed')">Mark Complete</button>`:''}
-      </div>`:''}
-    </div>
-  </div>`;
-}
-function helperSetJobStatus(jobId, status){
-  const job = db.jobs.find(j=>j.id===jobId);
-  if(job){ job.status = status; saveData(); renderHelper(); }
-}
-function customerHTML(c){
-  return `
-  <div class="ticket" onclick="openCustomerModal(${c.id})">
-    <div class="stripe" style="background:var(--ink);"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body">
-      <div class="job-title">${c.name}</div>
-      <div class="meta-row"><span>☎ ${c.phone||'—'}</span></div>
-      <div class="meta-row"><span>📍 ${c.address||'—'}</span></div>
-    </div>
-  </div>`;
-}
-function leadHTML(l){
-  return `
-  <div class="ticket status-scheduled" onclick="openLeadModal(${l.id})">
-    <div class="stripe"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body">
-      <div class="top-row">
-        <div>
-          <div class="job-title">${l.name}</div>
-          <div class="customer">${l.source||'No source'}</div>
-        </div>
-        <span class="status-tag scheduled">${l.status}</span>
-      </div>
-      <div class="meta-row"><span>☎ ${l.phone||'—'}</span></div>
-    </div>
-  </div>`;
-}
-function moneyHTML(item, kind){
-  const total = itemsTotal(item.items);
-  const dueText = kind==='invoice' && item.due ? ' · due '+item.due : '';
-  return `
-  <div class="ticket status-${item.status}" onclick="${kind==='invoice'?'openInvoiceModal':'openEstimateModal'}(${item.id})">
-    <div class="stripe"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body">
-      <div class="top-row">
-        <div>
-          <div class="job-title">${customerName(item.customerId)}</div>
-          <div class="customer mono">$${total.toLocaleString()}${dueText}</div>
-        </div>
-        <span class="status-tag ${item.status}">${item.status}</span>
-      </div>
-    </div>
-  </div>`;
-}
-
-function priceItemHTML(p){
-  return `
-  <div class="ticket" onclick="openPriceItemModal(${p.id})">
-    <div class="stripe" style="background:var(--ink);"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body">
-      <div class="top-row">
-        <div class="job-title">${p.name}</div>
-        <div class="customer mono">$${Number(p.price).toLocaleString()} / ${p.unit}</div>
-      </div>
-    </div>
-  </div>`;
-}
-function partnerHTML(p){
-  return `
-  <div class="ticket">
-    <div class="stripe" style="background:var(--charcoal);"></div>
-    <div class="punch-hole"></div>
-    <div class="ticket-body" onclick="openPartnerModal(${p.id})">
-      <div class="top-row">
-        <div>
-          <div class="job-title">${p.name}</div>
-          <div class="customer">${p.trade||'—'}</div>
-        </div>
-      </div>
-      ${p.notes?`<div class="meta-row" style="margin-top:8px;"><span style="font-family:'Inter';font-size:12.5px;color:rgba(28,30,34,0.6);">${p.notes}</span></div>`:''}
-      ${p.phone?`<a href="tel:${p.phone.replace(/[^0-9+]/g,'')}" onclick="event.stopPropagation();" class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);margin-top:12px;text-decoration:none;">📞 Call ${p.phone}</a>`:''}
-    </div>
-  </div>`;
-}
-
-/* ---------- PULSE ---------- */
-const PULSE_COLORS = {
-  scheduled:'var(--blue)', in_progress:'var(--orange)', paused:'#8a8f98', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
-  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
-};
-function renderPulse(elId, list, statuses, title){
-  const total = list.length;
-  const counts = statuses.map(s => ({ s, n: list.filter(x=>x.status===s).length }));
-  const segs = counts.filter(c=>c.n>0).map(c=>
-    `<div class="seg" style="width:${(c.n/total*100)||0}%;background:${PULSE_COLORS[c.s]};"></div>`
-  ).join('');
-  const legend = counts.map(c=>
-    `<div class="item"><span class="dot" style="background:${PULSE_COLORS[c.s]};"></span>${statusLabel(c.s)} · ${c.n}</div>`
-  ).join('');
-  document.getElementById(elId).innerHTML = total ? `
-    <div class="pulse-head"><h3>${title}</h3><span class="total">${total} total</span></div>
-    <div class="pulse-bar">${segs}</div>
-    <div class="pulse-legend">${legend}</div>
-  ` : `<div class="pulse-head"><h3>${title}</h3><span class="total">0</span></div><p style="font-size:13px;color:rgba(28,30,34,0.4);margin:0;">Nothing here yet.</p>`;
-}
-
-/* ---------- RENDER OWNER APP ---------- */
-function renderOwner(){
-  document.getElementById('ownerCoName').innerHTML = (db.settings.companyName||'MY COMPANY').toUpperCase() + '<span class="dot">.</span>';
-  renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','paused','completed','invoiced','cancelled'], 'Jobs');
-  renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
-  renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
-
-  document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><p>No jobs today. Tap + to create one.</p></div>`;
-  document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(1)).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
-
-  document.getElementById('jobsList').innerHTML = db.jobs.map(ticketHTML).join('') || emptyState('🛠','No jobs yet.');
-  document.getElementById('jobsCount').textContent = db.jobs.length;
-
-  document.getElementById('customersList').innerHTML = db.customers.map(customerHTML).join('') || emptyState('☺','No customers yet.');
-  document.getElementById('customersCount').textContent = db.customers.length;
-
-  document.getElementById('leadsList').innerHTML = db.leads.map(leadHTML).join('') || emptyState('📞','No leads yet.');
-  document.getElementById('leadsCount').textContent = db.leads.length;
-
-  document.getElementById('estimatesList').innerHTML = db.estimates.map(e=>moneyHTML(e,'estimate')).join('') || emptyState('📄','No estimates yet.');
-  document.getElementById('estimatesCount').textContent = db.estimates.length;
-  document.getElementById('invoicesList').innerHTML = db.invoices.map(i=>moneyHTML(i,'invoice')).join('') || emptyState('🧾','No invoices yet.');
-  document.getElementById('invoicesCount').textContent = db.invoices.length;
-
-  document.getElementById('priceBookList').innerHTML = db.priceBook.map(priceItemHTML).join('') || emptyState('📋','No price book items yet.');
-  document.getElementById('priceBookCount').textContent = db.priceBook.length;
-  document.getElementById('partnersList').innerHTML = db.partners.map(partnerHTML).join('') || emptyState('🤝','No partners yet.');
-  document.getElementById('partnersCount').textContent = db.partners.length;
-
-  document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
-  const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
-  const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
-  document.getElementById('ccJobsSub').textContent = openJobsCount + ' open';
-  document.getElementById('ccMoneySub').textContent = '$'+openTotal.toLocaleString()+' open invoices · '+db.estimates.filter(e=>e.status==='sent').length+' estimates pending';
-  const moneyComing = openTotal + db.estimates.filter(e=>e.status==='sent').reduce((s,e)=>s+itemsTotal(e.items),0);
-  document.getElementById('ccGoldNum').textContent = '$'+moneyComing.toLocaleString();
-  renderAgenda();
-  if(document.getElementById('calGrid')) renderCalendar();
-}
-function emptyState(glyph, text){ return `<div class="empty-state"><p>${text}</p></div>`; }
-function myHelperJobsToday(){
-  return db.jobs.filter(j=>j.date===todayPlus(0) && (j.helperId===currentHelperId || !j.helperId));
-}
-function renderHelper(){
-  const name = helperName(currentHelperId);
-  document.getElementById('helperNameTag').textContent = name ? name : 'Unassigned helper';
-  document.getElementById('helperJobsList').innerHTML = myHelperJobsToday().map(helperTicketHTML).join('') || emptyState('🛠','No jobs today.');
-  renderHelperPhotosTab();
-  renderHelperProfileTab();
-}
-function showHelperTab(tab){
-  document.getElementById('helperTab-today').classList.toggle('hidden', tab!=='today');
-  document.getElementById('helperTab-photos').classList.toggle('hidden', tab!=='photos');
-  document.getElementById('helperTab-profile').classList.toggle('hidden', tab!=='profile');
-  document.querySelectorAll('#helperApp .navbtn').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`#helperApp .navbtn[data-htab="${tab}"]`).classList.add('active');
-  if(tab==='photos') renderHelperPhotosTab();
-  if(tab==='profile') renderHelperProfileTab();
-}
-function renderHelperPhotosTab(){
-  const box = document.getElementById('helperPhotosList');
-  if(!box) return;
-  const jobs = myHelperJobsToday();
-  if(jobs.length===0){ box.innerHTML = emptyState('','No jobs today to attach photos to.'); return; }
-  box.innerHTML = jobs.map(job=>{
-    const photos = job.fieldPhotos||[];
-    return `
-    <div class="pulse-card">
-      <div class="pulse-head"><h3>${job.title}</h3><span class="total">${photos.length} photo${photos.length===1?'':'s'}</span></div>
-      ${photos.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
-        ${photos.map(p=>`<img src="${p.dataUrl}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1.5px solid var(--ink);"/>`).join('')}
-      </div>`:''}
-      <button class="btn btn-secondary" onclick="triggerPhotoCapture(${job.id})">+ Add Photo</button>
-    </div>`;
-  }).join('');
-}
-let pendingPhotoJobId = null;
-function triggerPhotoCapture(jobId){ pendingPhotoJobId = jobId; document.getElementById('helperPhotoInput').click(); }
-function handlePhotoSelected(event){
-  const file = event.target.files[0];
-  if(!file || !pendingPhotoJobId) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const job = db.jobs.find(j=>j.id===pendingPhotoJobId);
-    if(job){
-      job.fieldPhotos = job.fieldPhotos || [];
-      job.fieldPhotos.push({id:newId(), dataUrl:e.target.result, at:new Date().toISOString()});
-      saveData();
-      renderHelperPhotosTab();
-    }
-  };
-  reader.readAsDataURL(file);
-  event.target.value = '';
-}
-function renderHelperProfileTab(){
-  const box = document.getElementById('helperProfileBox');
-  if(!box) return;
-  const name = helperName(currentHelperId) || 'Unassigned helper';
-  const jobsToday = myHelperJobsToday().length;
-  box.innerHTML = `
-    <div class="pulse-card">
-      <div style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:28px;text-transform:uppercase;">${name}</div>
-      <div class="mono" style="font-size:12px;color:rgba(28,30,34,0.5);margin-top:6px;">${jobsToday} job${jobsToday===1?'':'s'} today</div>
-    </div>
-    <div class="pulse-card">
-      <div class="pulse-head"><h3>Reports to</h3></div>
-      <div style="font-size:16px;font-weight:600;">${db.settings.ownerName || db.settings.companyName || '—'}</div>
-      <div class="mono" style="font-size:12px;color:rgba(28,30,34,0.5);margin-top:4px;">${db.settings.companyName||''}</div>
-    </div>`;
-}
-
-function showOwnerTab(tab){
-  document.querySelectorAll('.tabpane').forEach(el=>el.classList.add('hidden'));
-  document.getElementById('ownerTab-'+tab).classList.remove('hidden');
-  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
-  const btn = document.querySelector(`.navbtn[data-tab="${tab}"]`);
-  if(btn) btn.classList.add('active');
-}
-function openAgenda(){ renderAgenda(); renderCalendar(); showOwnerTab('agenda'); }
-function openPriceBook(){ showOwnerTab('pricebook'); }
-function openPartners(){ showOwnerTab('partners'); }
-let calYear, calMonth, selectedCalDate = null;
-(function initCalendar(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); })();
-function isoDate(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
-function jobsOnDate(dateStr){ return db.jobs.filter(j=>j.date===dateStr); }
-function estimatesOnDate(dateStr){ return db.estimates.filter(e=>e.date===dateStr); }
-const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
-function renderCalendar(){
-  document.getElementById('calMonthLabel').textContent = MONTH_NAMES[calMonth]+' '+calYear;
-  const firstDow = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const todayStr = isoDate(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-  let html='';
-  for(let i=0;i<firstDow;i++) html += `<div class="cal-day empty"></div>`;
-  for(let d=1; d<=daysInMonth; d++){
-    const dateStr = isoDate(calYear, calMonth, d);
-    const hasSomething = jobsOnDate(dateStr).length>0 || estimatesOnDate(dateStr).length>0;
-    const blocked = db.availability.includes(dateStr);
-    let cls='cal-day';
-    if(hasSomething) cls+=' has-job';
-    else if(blocked) cls+=' blocked';
-    if(dateStr===todayStr) cls+=' today';
-    if(dateStr===selectedCalDate) cls+=' selected';
-    html += `<div class="${cls}" onclick="selectCalDay('${dateStr}')">${d}</div>`;
-  }
-  document.getElementById('calGrid').innerHTML = html;
-  renderCalDayPanel();
-}
-function calPrevMonth(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
-function calNextMonth(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
-function selectCalDay(dateStr){ selectedCalDate = (selectedCalDate===dateStr) ? null : dateStr; renderCalendar(); }
-function renderCalDayPanel(){
-  const panel = document.getElementById('calDayPanel');
-  if(!selectedCalDate){ panel.innerHTML=''; return; }
-  const jobsHere = jobsOnDate(selectedCalDate);
-  const estimatesHere = estimatesOnDate(selectedCalDate);
-  const blocked = db.availability.includes(selectedCalDate);
-  let html = `<h4>${selectedCalDate}</h4>`;
-  if(jobsHere.length || estimatesHere.length){
-    html += jobsHere.map(ticketHTML).join('');
-    html += estimatesHere.map(e=>moneyHTML(e,'estimate')).join('');
-  } else {
-    html += `<p style="font-size:13px;color:rgba(28,30,34,0.5);margin:0 0 10px;">Nothing scheduled this day.</p>`;
-  }
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-    <button class="btn btn-primary" style="box-shadow:2px 2px 0px var(--ink);" onclick="openJobModal(null,'${selectedCalDate}')">+ Job here</button>
-    <button class="btn btn-secondary" onclick="openEstimateModal(null,'${selectedCalDate}')">+ Estimate here</button>
-  </div>
-  <button class="btn ${blocked?'btn-secondary':'btn-danger'}" style="margin-top:10px;" onclick="toggleAvailability('${selectedCalDate}')">${blocked?'Mark Available Again':'Mark Unavailable'}</button>`;
-  panel.innerHTML = html;
-}
-function toggleAvailability(dateStr){
-  if(db.availability.includes(dateStr)) db.availability = db.availability.filter(d=>d!==dateStr);
-  else db.availability.push(dateStr);
-  saveData(); renderCalendar();
-}
-/* ---------- BREAKDOWN PAGE (single hue per tab, intensity = share of total) ---------- */
-const BREAKDOWN_CONFIG = {
-  jobs: { title:'Jobs Breakdown', baseColor:'#FE7F2D', statuses:[
-    {key:'scheduled', label:'Scheduled', sub:'On the books', h:'bd-h1'},
-    {key:'in_progress', label:'In Progress', sub:'Crew is on site', h:'bd-h2'},
-    {key:'paused', label:'Paused', sub:'On hold', h:'bd-h4'},
-    {key:'completed', label:'Completed', sub:'Done, not billed', h:'bd-h3'},
-    {key:'invoiced', label:'Invoiced', sub:'Billed out', h:'bd-h4'},
-    {key:'cancelled', label:'Cancelled', sub:"Didn't happen", h:'bd-h2'},
-  ]},
-  estimates: { title:'Estimates Breakdown', baseColor:'#2C5F7C', statuses:[
-    {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
-    {key:'sent', label:'Sent', sub:'Waiting on client', h:'bd-h3'},
-    {key:'approved', label:'Approved', sub:'Ready to schedule', h:'bd-h2'},
-    {key:'declined', label:'Declined', sub:"Didn't win it", h:'bd-h4'},
-  ]},
-  invoices: { title:'Invoices Breakdown', baseColor:'#233D4D', statuses:[
-    {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
-    {key:'sent', label:'Sent', sub:'Awaiting payment', h:'bd-h2'},
-    {key:'paid', label:'Paid', sub:'Money in', h:'bd-h3'},
-    {key:'overdue', label:'Overdue', sub:'Follow up', h:'bd-h4'},
-  ]},
-};
-function getListForType(type){ return type==='jobs' ? db.jobs : type==='estimates' ? db.estimates : db.invoices; }
-function openBreakdown(type){ renderBreakdownPage(type); showOwnerTab('breakdown'); }
-function shadeStyle(baseHex, ratio){
-  const whitePct = Math.max(8, Math.round(92 - ratio*84));
-  const bg = `color-mix(in srgb, white ${whitePct}%, ${baseHex} ${100-whitePct}%)`;
-  const fg = whitePct > 48 ? '#1C1E22' : '#ffffff';
-  return { bg, fg };
-}
-function renderBreakdownPage(type){
-  const cfg = BREAKDOWN_CONFIG[type];
-  const list = getListForType(type);
-  const total = list.length;
-  document.getElementById('breakdownTitle').textContent = cfg.title + ' — ' + total + ' total';
-  document.getElementById('breakdownGrid').innerHTML = cfg.statuses.map(s=>{
-    const n = list.filter(x=>x.status===s.key).length;
-    const ratio = total ? n/total : 0;
-    const {bg, fg} = shadeStyle(cfg.baseColor, ratio);
-    return `<div class="breakdown-card ${s.h}" style="background:${bg};color:${fg};">
-      <div><h4>${s.label}</h4><div class="bd-sub">${s.sub}</div></div>
-      <div class="bd-pct">${n}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderAgenda(){
-  const buckets = [['Today',[]], ['Tomorrow',[]], ['Everything else',[]]];
-  db.jobs.forEach(j=>{
-    if(j.date===todayPlus(0)) buckets[0][1].push(j);
-    else if(j.date===todayPlus(1)) buckets[1][1].push(j);
-    else buckets[2][1].push(j);
-  });
-  let html='';
-  buckets.forEach(([label,list])=>{
-    if(list.length===0) return;
-    html += `<div class="section-head"><h2>${label}</h2><span class="count">${list.length}</span></div>${list.map(ticketHTML).join('')}`;
-  });
-  document.getElementById('agendaList').innerHTML = html || emptyState('📅','Nothing scheduled yet.');
-}
-
-let currentHelperId = null;
-function enterApp(){
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('ownerApp').classList.remove('hidden');
-  renderOwner();
-}
-async function logout(){
-  document.getElementById('ownerApp').classList.add('hidden');
-  document.getElementById('helperApp').classList.add('hidden');
-  currentHelperId = null;
-  currentUserId = null;
-  await supabaseClient.auth.signOut();
-  localStorage.removeItem(STORAGE_KEY);
-  db = JSON.parse(JSON.stringify(freshBlankData()));
-  document.getElementById('authEmail').value = '';
-  document.getElementById('authPassword').value = '';
-  showAuthError('');
-  document.getElementById('loginScreen').classList.remove('hidden');
-}
-function previewHelper(){
-  closeModal();
-  document.getElementById('ownerApp').classList.add('hidden');
-  currentHelperId = db.helpers.length ? db.helpers[0].id : null;
-  document.getElementById('helperApp').classList.remove('hidden');
-  showHelperTab('today');
-  renderHelper();
-}
-function showAuthError(msg){
-  const el = document.getElementById('authError');
-  el.textContent = msg;
-  el.style.display = msg ? 'block' : 'none';
-}
-async function handleSignUp(){
-  const email = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPassword').value;
-  if(!email || !password){ showAuthError('Enter an email and password.'); return; }
-  if(password.length < 6){ showAuthError('Password needs at least 6 characters.'); return; }
-  showAuthError('');
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
-  if(error){ showAuthError(error.message); return; }
-  if(!data.session){
-    showAuthError('Account created — check your email to confirm, then log in.');
-    return;
-  }
-  currentUserId = data.user.id;
-  db = await loadFromCloud();
-  enterApp();
-}
-async function handleLogIn(){
-  const email = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPassword').value;
-  if(!email || !password){ showAuthError('Enter your email and password.'); return; }
-  showAuthError('');
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if(error){ showAuthError(error.message); return; }
-  currentUserId = data.user.id;
-  db = await loadFromCloud();
-  enterApp();
-}
-
-let clockedIn=false, clockStart=null, clockTimer=null;
-function toggleClock(){
-  clockedIn=!clockedIn;
-  const btn=document.getElementById('clockBtn');
-  const status=document.getElementById('clockStatus');
-  if(clockedIn){
-    clockStart=Date.now();
-    btn.textContent='Clock Out';
-    status.textContent='Clocked In';
-    clockTimer=setInterval(()=>{
-      const secs=Math.floor((Date.now()-clockStart)/1000);
-      const h=String(Math.floor(secs/3600)).padStart(2,'0');
-      const m=String(Math.floor((secs%3600)/60)).padStart(2,'0');
-      document.getElementById('clockTime').textContent=`${h}:${m}`;
-    },1000);
-  } else {
-    clearInterval(clockTimer);
-    btn.textContent='Clock In';
-    status.textContent='Clocked Out';
-    document.getElementById('clockTime').textContent='--:--';
-  }
-}
-
-/* ============================================================
-   MODALS — add / edit / delete for jobs, customers, estimates, invoices
-   ============================================================ */
-function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
-function openModal(html){ document.getElementById('modalRoot').innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><div class="sheet-handle"></div>${html}</div></div>`; }
-
-function customerOptions(selectedId){
-  return db.customers.map(c=>`<option value="${c.id}" ${c.id===selectedId?'selected':''}>${c.name}</option>`).join('');
-}
-function helperOptions(selectedId){
-  return `<option value="" ${!selectedId?'selected':''}>Unassigned</option>` +
-    db.helpers.map(h=>`<option value="${h.id}" ${h.id===selectedId?'selected':''}>${h.name}</option>`).join('');
-}
-function helperName(id){ const h=db.helpers.find(h=>h.id===id); return h ? h.name : null; }
-
-function openSettingsModal(){
-  openModal(`
-    <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Company name</label><input id="f_companyName" value="${(db.settings.companyName||'').replace(/"/g,'&quot;')}" placeholder="407 Renovations"/></div>
-    <div class="field"><label>Owner name</label><input id="f_ownerName" value="${(db.settings.ownerName||'').replace(/"/g,'&quot;')}" placeholder="Your name"/></div>
-    <button class="btn btn-primary" onclick="saveSettings()">Save</button>
-    <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
-    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:10px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Helpers</label>
-    <div id="helpersList">${helpersListHTML()}</div>
-    <div class="field-row" style="margin-top:4px;">
-      <div class="field"><input id="f_newHelperName" placeholder="Helper's name"/></div>
-      <div class="field"><input id="f_newHelperPhone" placeholder="Phone (optional)"/></div>
-    </div>
-    <button class="btn btn-secondary" onclick="addHelper()">+ Add Helper</button>
-    <button class="btn btn-secondary" style="margin-top:10px;" onclick="previewHelper()">Preview Helper View</button>
-    <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
-    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This wipes every job, customer, estimate, and invoice on this device so you can start clean with your own info. Can't be undone.</p>
-    <button class="btn btn-danger" onclick="confirmClearAll()">Clear All Data</button>
-  `);
-}
-function helpersListHTML(){
-  if(db.helpers.length===0) return `<p style="font-size:13px;color:rgba(28,30,34,0.45);margin:0 0 12px;">No helpers added yet.</p>`;
-  return db.helpers.map(h=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
-      <div><strong style="font-size:14px;">${h.name}</strong>${h.phone?`<div class="mono" style="font-size:11px;color:rgba(28,30,34,0.5);">${h.phone}</div>`:''}</div>
-      <button style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;" onclick="removeHelper(${h.id})">✕</button>
-    </div>`).join('');
-}
-function addHelper(){
-  const name = document.getElementById('f_newHelperName').value.trim();
-  if(!name) return;
-  const phone = document.getElementById('f_newHelperPhone').value.trim();
-  db.helpers.push({id:newId(), name, phone});
-  saveData();
-  document.getElementById('helpersList').innerHTML = helpersListHTML();
-  document.getElementById('f_newHelperName').value='';
-  document.getElementById('f_newHelperPhone').value='';
-}
-function removeHelper(id){
-  db.helpers = db.helpers.filter(h=>h.id!==id);
-  db.jobs.forEach(j=>{ if(j.helperId===id) j.helperId=null; });
-  saveData();
-  document.getElementById('helpersList').innerHTML = helpersListHTML();
-  renderOwner();
-}
-function saveSettings(){
-  db.settings.companyName = document.getElementById('f_companyName').value.trim() || '407 Renovations';
-  db.settings.ownerName = document.getElementById('f_ownerName').value.trim();
-  saveData(); closeModal(); renderOwner();
-}
-function confirmClearAll(){
-  openModal(`
-    <div class="sheet-head"><h2>Are you sure?</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <p style="font-size:13px;color:rgba(28,30,34,0.55);margin:0 0 16px;">This deletes all ${db.jobs.length} jobs, ${db.customers.length} customers, ${db.leads.length} leads, ${db.estimates.length} estimates, and ${db.invoices.length} invoices currently on this device. Your price book and partners list are kept. There's no undo.</p>
-    <button class="btn btn-danger" onclick="clearAllData()">Yes, delete everything</button>
-    <button class="btn btn-secondary" style="margin-top:10px;" onclick="openSettingsModal()">Cancel</button>
-  `);
-}
-function clearAllData(){
-  db.jobs = []; db.customers = []; db.leads = []; db.estimates = []; db.invoices = [];
-  saveData(); closeModal(); renderOwner();
-}
-
-function openAddMenu(){
-  document.getElementById('modalRoot').innerHTML = `
-    <div class="action-overlay" onclick="if(event.target===this)closeModal()">
-      <div class="action-wrap">
-        <div class="action-group">
-          <div class="action-title">Create new</div>
-          <div class="action-row" onclick="closeModal();openLeadModal()">Lead</div>
-          <div class="action-row" onclick="closeModal();openJobModal()">Job</div>
-          <div class="action-row" onclick="closeModal();openEstimateModal()">Estimate</div>
-          <div class="action-row" onclick="closeModal();openInvoiceModal()">Invoice</div>
-          <div class="action-row" onclick="closeModal();openCustomerModal()">Customer</div>
-          <div class="action-row" onclick="closeModal();openPriceItemModal()">Price Item</div>
-          <div class="action-row" onclick="closeModal();openPartnerModal()">Partner</div>
-        </div>
-        <div class="action-cancel" onclick="closeModal()">Cancel</div>
-      </div>
-    </div>`;
-}
-
-/* ---- JOB modal ---- */
-function openJobModal(id, presetDate){
-  const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',time:'',date:presetDate||todayPlus(0),address:'',notes:'',items:[]};
-  lineItemsDraft = JSON.parse(JSON.stringify(job.items||[]));
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Job':'New Job'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Job title</label><input id="f_title" value="${job.title.replace(/"/g,'&quot;')}" placeholder="Kitchen remodel"/></div>
-    <div class="field"><label>Customer</label><select id="f_customer">${customerOptions(job.customerId)}</select></div>
-    <div class="field"><label>Assigned to</label><select id="f_helper">${helperOptions(job.helperId)}</select></div>
-    <div class="field-row">
-      <div class="field"><label>Status</label>
-        <select id="f_status">
-          ${['scheduled','in_progress','paused','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field"><label>Date</label><input id="f_date" type="date" value="${job.date||todayPlus(0)}"/></div>
-    </div>
-    <div class="field"><label>Time (optional)</label><input id="f_time" value="${job.time||''}" placeholder="9:00 AM"/></div>
-    <div class="field"><label>Address</label><input id="f_address" value="${(job.address||'').replace(/"/g,'&quot;')}" placeholder="Job site address"/></div>
-    <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Scope, access notes...">${job.notes||''}</textarea></div>
-    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Cost / items (optional)</label>
-    <div id="lineItemsBox"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
-      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
-    </div>
-    <div class="li-total">Total: <span id="liTotal">$0</span></div>
-    <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertJobToInvoice(${id})">Create Invoice from this Job</button>`:''}
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteJob('+id+')">Delete Job</button>':''}
-  `);
-  renderLineItems();
-}
-function saveJob(id){
-  const data = {
-    title: document.getElementById('f_title').value.trim() || 'Untitled job',
-    customerId: Number(document.getElementById('f_customer').value),
-    helperId: document.getElementById('f_helper').value ? Number(document.getElementById('f_helper').value) : null,
-    status: document.getElementById('f_status').value,
-    date: document.getElementById('f_date').value || todayPlus(0),
-    time: document.getElementById('f_time').value.trim(),
-    address: document.getElementById('f_address').value.trim(),
-    notes: document.getElementById('f_notes').value.trim(),
-    items: lineItemsDraft.filter(i=>i.name.trim()!==''),
-  };
-  if(id){ Object.assign(db.jobs.find(j=>j.id===id), data); }
-  else { db.jobs.push({id:newId(), ...data}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deleteJob(id){ db.jobs = db.jobs.filter(j=>j.id!==id); saveData(); closeModal(); renderOwner(); }
-
-/* ---- CUSTOMER modal ---- */
-function openCustomerModal(id){
-  const c = id ? db.customers.find(c=>c.id===id) : {name:'',phone:'',email:'',address:'',notes:''};
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Customer':'New Customer'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Name</label><input id="f_name" value="${c.name.replace(/"/g,'&quot;')}" placeholder="Full name"/></div>
-    <div class="field-row">
-      <div class="field"><label>Phone</label><input id="f_phone" value="${c.phone||''}" placeholder="(407) 555-0100"/></div>
-      <div class="field"><label>Email</label><input id="f_email" value="${c.email||''}" placeholder="optional"/></div>
-    </div>
-    <div class="field"><label>Address</label><input id="f_caddress" value="${(c.address||'').replace(/"/g,'&quot;')}" placeholder="Street, city, state"/></div>
-    <div class="field"><label>Notes</label><textarea id="f_cnotes" placeholder="Gate code, preferences...">${c.notes||''}</textarea></div>
-    <button class="btn btn-primary" onclick="saveCustomer(${id||'null'})">Save Customer</button>
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteCustomer('+id+')">Delete Customer</button>':''}
-  `);
-}
-function saveCustomer(id){
-  const data = {
-    name: document.getElementById('f_name').value.trim() || 'Unnamed customer',
-    phone: document.getElementById('f_phone').value.trim(),
-    email: document.getElementById('f_email').value.trim(),
-    address: document.getElementById('f_caddress').value.trim(),
-    notes: document.getElementById('f_cnotes').value.trim(),
-  };
-  if(id){ Object.assign(db.customers.find(c=>c.id===id), data); }
-  else { db.customers.push({id:newId(), ...data}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deleteCustomer(id){ db.customers = db.customers.filter(c=>c.id!==id); saveData(); closeModal(); renderOwner(); }
-
-/* ---- LEAD modal ---- */
-function openLeadModal(id){
-  const l = id ? db.leads.find(l=>l.id===id) : {name:'',phone:'',source:'',notes:'',status:'open'};
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Lead':'New Lead'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Name</label><input id="f_lname" value="${l.name.replace(/"/g,'&quot;')}" placeholder="Who's asking?"/></div>
-    <div class="field-row">
-      <div class="field"><label>Phone</label><input id="f_lphone" value="${l.phone||''}" placeholder="(407) 555-0100"/></div>
-      <div class="field"><label>Source</label><input id="f_lsource" value="${l.source||''}" placeholder="Referral, Google..."/></div>
-    </div>
-    <div class="field"><label>Status</label>
-      <select id="f_lstatus">
-        ${['open','won','lost'].map(s=>`<option value="${s}" ${s===l.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="field"><label>Notes</label><textarea id="f_lnotes" placeholder="What do they need?">${l.notes||''}</textarea></div>
-    <button class="btn btn-primary" onclick="saveLead(${id||'null'})">Save Lead</button>
-    ${id?'<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertLead('+id+')">Convert to Customer</button>':''}
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteLead('+id+')">Delete Lead</button>':''}
-  `);
-}
-function saveLead(id){
-  const data = {
-    name: document.getElementById('f_lname').value.trim() || 'Unnamed lead',
-    phone: document.getElementById('f_lphone').value.trim(),
-    source: document.getElementById('f_lsource').value.trim(),
-    status: document.getElementById('f_lstatus').value,
-    notes: document.getElementById('f_lnotes').value.trim(),
-  };
-  if(id){ Object.assign(db.leads.find(l=>l.id===id), data); }
-  else { db.leads.push({id:newId(), ...data}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deleteLead(id){ db.leads = db.leads.filter(l=>l.id!==id); saveData(); closeModal(); renderOwner(); }
-function convertLead(id){
-  const l = db.leads.find(l=>l.id===id);
-  db.customers.push({id:newId(), name:l.name, phone:l.phone, email:'', address:'', notes:l.notes});
-  db.leads = db.leads.filter(x=>x.id!==id);
-  saveData(); closeModal(); renderOwner();
-}
-
-/* ---- ESTIMATE / INVOICE (shared line-item UI) ---- */
-let lineItemsDraft = [];
-function lineItemRowHTML(item, idx){
-  return `
-  <div class="line-item-row">
-    <input placeholder="Item / description" value="${(item.name||'').replace(/"/g,'&quot;')}" oninput="lineItemsDraft[${idx}].name=this.value"/>
-    <input placeholder="Qty" type="number" value="${item.qty||1}" oninput="lineItemsDraft[${idx}].qty=this.value;updateLiTotal()"/>
-    <input placeholder="Price" type="number" value="${item.price||0}" oninput="lineItemsDraft[${idx}].price=this.value;updateLiTotal()"/>
-    <button class="remove-li" onclick="removeLineItem(${idx})">✕</button>
-  </div>`;
-}
-function renderLineItems(){
-  document.getElementById('lineItemsBox').innerHTML = lineItemsDraft.map(lineItemRowHTML).join('');
-  updateLiTotal();
-}
-function addLineItem(){ lineItemsDraft.push({name:'',qty:1,price:0}); renderLineItems(); }
-function addLineItemFromPriceBook(){
-  if(db.priceBook.length===0){ addLineItem(); return; }
-  document.getElementById('pickerRoot').innerHTML = `
-    <div class="overlay" onclick="if(event.target===this)closePicker()">
-      <div class="sheet">
-        <div class="sheet-handle"></div>
-        <div class="sheet-head"><h2>Price Book</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
-        ${db.priceBook.map(p=>`
-          <div class="menu-option" onclick="pickPriceBookItem(${p.id})">
-            <div>${p.name}<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin-top:2px;">$${Number(p.price).toLocaleString()} / ${p.unit}</div></div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-}
-function closePicker(){ document.getElementById('pickerRoot').innerHTML = ''; }
-function pickPriceBookItem(id){
-  const p = db.priceBook.find(p=>p.id===id);
-  lineItemsDraft.push({name:p.name, qty:1, price:p.price});
-  closePicker();
-  renderLineItems();
-}
-function removeLineItem(idx){ lineItemsDraft.splice(idx,1); renderLineItems(); }
-function updateLiTotal(){
-  const total = itemsTotal(lineItemsDraft);
-  const el = document.getElementById('liTotal');
-  if(el) el.textContent = '$'+total.toLocaleString();
-}
-
-function openEstimateModal(id, presetDate){
-  const e = id ? db.estimates.find(e=>e.id===id) : {customerId:db.customers[0]?.id,status:'draft',date:presetDate||'',items:[{name:'',qty:1,price:0}]};
-  lineItemsDraft = JSON.parse(JSON.stringify(e.items));
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Estimate':'New Estimate'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Customer</label><select id="f_ecustomer">${customerOptions(e.customerId)}</select></div>
-    <div class="field-row">
-      <div class="field"><label>Status</label>
-        <select id="f_estatus">
-          ${['draft','sent','approved','declined'].map(s=>`<option value="${s}" ${s===e.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field"><label>Site visit date (optional)</label><input id="f_edate" type="date" value="${e.date||''}"/></div>
-    </div>
-    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
-    <div id="lineItemsBox"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
-      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
-    </div>
-    <div class="li-total">Total: <span id="liTotal">$0</span></div>
-    <button class="btn btn-primary" onclick="saveEstimate(${id||'null'})">Save Estimate</button>
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertEstimateToInvoice(${id})">Convert to Invoice</button>`:''}
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteEstimate('+id+')">Delete Estimate</button>':''}
-  `);
-  renderLineItems();
-}
-function saveEstimate(id){
-  const data = {
-    customerId: Number(document.getElementById('f_ecustomer').value),
-    status: document.getElementById('f_estatus').value,
-    date: document.getElementById('f_edate').value,
-    items: lineItemsDraft.filter(i=>i.name.trim()!==''),
-  };
-  if(id){ Object.assign(db.estimates.find(e=>e.id===id), data); }
-  else { db.estimates.push({id:newId(), ...data}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deleteEstimate(id){ db.estimates = db.estimates.filter(e=>e.id!==id); saveData(); closeModal(); renderOwner(); }
-
-function invoicePaidTotal(inv){ return (inv.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0); }
-function invoiceBalance(inv){ return itemsTotal(inv.items) - invoicePaidTotal(inv); }
-
-function openInvoiceModal(id){
-  const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}],payments:[]};
-  inv.payments = inv.payments || [];
-  lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
-  const sourceNote = inv.jobId ? `Created from job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
-    : inv.estimateId ? `Created from an estimate` : '';
-  const jobTotal = itemsTotal(inv.items);
-  const paid = invoicePaidTotal(inv);
-  const balance = jobTotal - paid;
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    ${sourceNote?`<p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">${sourceNote}</p>`:''}
-    <div class="field"><label>Customer</label><select id="f_icustomer">${customerOptions(inv.customerId)}</select></div>
-    <div class="field-row">
-      <div class="field"><label>Status</label>
-        <select id="f_istatus">
-          ${['draft','sent','paid','overdue'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field"><label>Due date</label><input id="f_due" type="date" value="${inv.due||''}"/></div>
-    </div>
-    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Line items</label>
-    <div id="lineItemsBox"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
-      <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
-    </div>
-    <div class="li-total">Job Total: <span id="liTotal">$0</span></div>
-    ${id?`
-    <div style="height:16px;border-bottom:1.5px dashed var(--line);margin:4px 0 16px;"></div>
-    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Payments</label>
-    <div id="paymentsBox">${renderPaymentsList(inv)}</div>
-    <button class="add-li-btn" onclick="openRecordPayment(${id})">+ Record Payment</button>
-    <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:13px;margin:12px 0 18px;">
-      <span>Paid to date: <strong>$${paid.toLocaleString()}</strong></span>
-      <span>Balance: <strong>$${balance.toLocaleString()}</strong></span>
-    </div>
-    `:''}
-    <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send Invoice to Customer</button>`:''}
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
-  `);
-  renderLineItems();
-}
-function renderPaymentsList(inv){
-  if(!inv.payments || !inv.payments.length) return `<p style="font-size:13px;color:rgba(28,30,34,0.45);margin:0 0 12px;">No payments recorded yet.</p>`;
-  return inv.payments.map((p,idx)=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);">
-      <div>
-        <div style="font-weight:600;font-size:14px;">$${Number(p.amount).toLocaleString()} <span style="font-weight:400;color:rgba(28,30,34,0.5);font-size:12px;">· ${p.method||'Payment'}</span></div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);">${p.date}${p.note?' · '+p.note:''}</div>
-      </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary" style="width:auto;padding:8px 12px;font-size:12px;" onclick="sendReceiptEmail(${inv.id},${idx})">Send Receipt</button>
-      </div>
-    </div>`).join('');
-}
-function openRecordPayment(invId){
-  document.getElementById('pickerRoot').innerHTML = `
-    <div class="overlay" onclick="if(event.target===this)closePicker()">
-      <div class="sheet">
-        <div class="sheet-handle"></div>
-        <div class="sheet-head"><h2>Record Payment</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
-        <div class="field"><label>Amount</label><input id="f_pay_amount" type="number" placeholder="500"/></div>
-        <div class="field-row">
-          <div class="field"><label>Date</label><input id="f_pay_date" type="date" value="${todayPlus(0)}"/></div>
-          <div class="field"><label>Method</label>
-            <select id="f_pay_method">
-              ${['Cash','Check','Zelle','Venmo','Card','Bank Transfer','Other'].map(m=>`<option value="${m}">${m}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div class="field"><label>Note (optional)</label><input id="f_pay_note" placeholder="Deposit, final payment..."/></div>
-        <button class="btn btn-primary" onclick="savePayment(${invId})">Save Payment</button>
-      </div>
-    </div>`;
-}
-function savePayment(invId){
-  const amount = Number(document.getElementById('f_pay_amount').value);
-  if(!amount || amount<=0){ return; }
-  const payment = {
-    amount,
-    date: document.getElementById('f_pay_date').value || todayPlus(0),
-    method: document.getElementById('f_pay_method').value,
-    note: document.getElementById('f_pay_note').value.trim(),
-  };
-  const inv = db.invoices.find(i=>i.id===invId);
-  inv.payments = inv.payments || [];
-  inv.payments.push(payment);
-  if(invoiceBalance(inv) <= 0){ inv.status = 'paid'; }
-  saveData();
-  closePicker();
-  openInvoiceModal(invId);
-}
-function saveInvoice(id){
-  const data = {
-    customerId: Number(document.getElementById('f_icustomer').value),
-    status: document.getElementById('f_istatus').value,
-    due: document.getElementById('f_due').value,
-    items: lineItemsDraft.filter(i=>i.name.trim()!==''),
-  };
-  if(id){ Object.assign(db.invoices.find(i=>i.id===id), data); }
-  else { db.invoices.push({id:newId(), ...data, payments:[]}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
-
-function convertJobToInvoice(jobId){
-  const job = db.jobs.find(j=>j.id===jobId);
-  const newInv = {
-    id:newId(), customerId:job.customerId, status:'sent', due:'',
-    items: JSON.parse(JSON.stringify(job.items||[])), jobId: job.id,
-  };
-  db.invoices.push(newInv);
-  job.status = 'invoiced';
-  saveData();
-  closeModal();
-  renderOwner();
-  openInvoiceModal(newInv.id);
-}
-function convertEstimateToInvoice(estimateId){
-  const est = db.estimates.find(e=>e.id===estimateId);
-  const newInv = {
-    id:newId(), customerId:est.customerId, status:'sent', due:'',
-    items: JSON.parse(JSON.stringify(est.items||[])), estimateId: est.id,
-  };
-  db.invoices.push(newInv);
-  est.status = 'approved';
-  saveData();
-  closeModal();
-  renderOwner();
-  openInvoiceModal(newInv.id);
-}
-function sendInvoiceEmail(id){
-  const inv = db.invoices.find(i=>i.id===id);
-  const cust = db.customers.find(c=>c.id===inv.customerId);
-  if(!cust || !cust.email){
-    alert('This customer has no email on file yet. Add one in Customers, then try again.');
-    return;
-  }
-  const total = itemsTotal(inv.items);
-  const company = db.settings.companyName || 'Our Company';
-  const owner = db.settings.ownerName || '';
-  const invoiceNum = 'INV-' + String(id).padStart(4,'0');
-  const todayStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-  const dueStr = inv.due ? new Date(inv.due+'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : null;
-  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
-
-  const NL = '%0D%0A';
-  const rule = '--------------------------------------------------';
-  let lines = [];
-  lines.push(`INVOICE ${invoiceNum}`);
-  lines.push(company);
-  lines.push('');
-  lines.push(`Date: ${todayStr}`);
-  if(dueStr) lines.push(`Due: ${dueStr}`);
-  if(job) lines.push(`Re: ${job.title}`);
-  lines.push('');
-  lines.push('Bill To:');
-  lines.push(cust.name);
-  if(cust.address) lines.push(cust.address);
-  lines.push('');
-  lines.push(rule);
-  inv.items.forEach(i=>{
-    const lineTotal = (Number(i.qty)||0) * (Number(i.price)||0);
-    lines.push(`${i.name}  (x${i.qty})  —  $${lineTotal.toLocaleString()}`);
-  });
-  lines.push(rule);
-  lines.push(`JOB TOTAL: $${total.toLocaleString()}`);
-  const paidSoFar = invoicePaidTotal(inv);
-  if(paidSoFar > 0){
-    lines.push(`PAID TO DATE: $${paidSoFar.toLocaleString()}`);
-    lines.push(`BALANCE DUE: $${(total-paidSoFar).toLocaleString()}`);
-  }
-  lines.push('');
-  lines.push('Thank you for your business.');
-  lines.push('');
-  lines.push(owner || company);
-  if(owner && company) lines.push(company);
-
-  const subject = encodeURIComponent(`${invoiceNum} from ${company}`);
-  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
-  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
-  if(inv.status==='draft'){ inv.status='sent'; saveData(); renderOwner(); }
-}
-
-function sendReceiptEmail(invId, paymentIdx){
-  const inv = db.invoices.find(i=>i.id===invId);
-  const cust = db.customers.find(c=>c.id===inv.customerId);
-  if(!cust || !cust.email){
-    alert('This customer has no email on file yet. Add one in Customers, then try again.');
-    return;
-  }
-  const payment = inv.payments[paymentIdx];
-  const company = db.settings.companyName || 'Our Company';
-  const owner = db.settings.ownerName || '';
-  const invoiceNum = 'INV-' + String(invId).padStart(4,'0');
-  const payDateStr = new Date(payment.date+'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-  const jobTotal = itemsTotal(inv.items);
-  const paidToDate = invoicePaidTotal(inv);
-  const balance = jobTotal - paidToDate;
-  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
-
-  const NL = '%0D%0A';
-  const rule = '--------------------------------------------------';
-  let lines = [];
-  lines.push(`PAYMENT RECEIPT`);
-  lines.push(company);
-  lines.push('');
-  lines.push(`Date: ${payDateStr}`);
-  lines.push(`Re: ${invoiceNum}${job ? ' — '+job.title : ''}`);
-  lines.push('');
-  lines.push(`Received from: ${cust.name}`);
-  lines.push('');
-  lines.push(rule);
-  lines.push(`AMOUNT RECEIVED: $${Number(payment.amount).toLocaleString()}`);
-  lines.push(`Method: ${payment.method}${payment.note ? ' — '+payment.note : ''}`);
-  lines.push(rule);
-  lines.push('');
-  lines.push(`Job Total: $${jobTotal.toLocaleString()}`);
-  lines.push(`Paid to Date: $${paidToDate.toLocaleString()}`);
-  lines.push(`Balance Remaining: $${balance.toLocaleString()}`);
-  lines.push('');
-  lines.push('Thank you — this confirms we received your payment.');
-  lines.push('');
-  lines.push(owner || company);
-  if(owner && company) lines.push(company);
-
-  const subject = encodeURIComponent(`Payment Receipt — ${invoiceNum} — $${Number(payment.amount).toLocaleString()}`);
-  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
-  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
-}
-
-/* ---- PRICE BOOK modal ---- */
-function openPriceItemModal(id){
-  const p = id ? db.priceBook.find(p=>p.id===id) : {name:'',unit:'each',price:0};
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Price Item':'New Price Item'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Item name</label><input id="f_pname" value="${(p.name||'').replace(/"/g,'&quot;')}" placeholder="Interior stairs, Tile install..."/></div>
-    <div class="field-row">
-      <div class="field"><label>Unit</label>
-        <select id="f_punit">
-          ${['each','sq ft','linear ft','hour','day','flat'].map(u=>`<option value="${u}" ${u===p.unit?'selected':''}>${u}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field"><label>Price</label><input id="f_pprice" type="number" value="${p.price||0}" placeholder="0.00"/></div>
-    </div>
-    <button class="btn btn-primary" onclick="savePriceItem(${id||'null'})">Save Item</button>
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deletePriceItem('+id+')">Delete Item</button>':''}
-  `);
-}
-function savePriceItem(id){
-  const data = {
-    name: document.getElementById('f_pname').value.trim() || 'Untitled item',
-    unit: document.getElementById('f_punit').value,
-    price: Number(document.getElementById('f_pprice').value) || 0,
-  };
-  if(id){ Object.assign(db.priceBook.find(p=>p.id===id), data); }
-  else { db.priceBook.push({id:newId(), ...data}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deletePriceItem(id){ db.priceBook = db.priceBook.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
-
-/* ---- PARTNER modal ---- */
-function openPartnerModal(id){
-  const p = id ? db.partners.find(p=>p.id===id) : {name:'',trade:'',phone:'',notes:''};
-  openModal(`
-    <div class="sheet-head"><h2>${id?'Edit Partner':'New Partner'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Name</label><input id="f_pname" value="${p.name.replace(/"/g,'&quot;')}" placeholder="Ray Delgado / Sunbelt Electric"/></div>
-    <div class="field-row">
-      <div class="field"><label>Trade</label><input id="f_ptrade" value="${p.trade||''}" placeholder="Plumber"/></div>
-      <div class="field"><label>Phone</label><input id="f_pphone" value="${p.phone||''}" placeholder="(407) 555-0100"/></div>
-    </div>
-    <div class="field"><label>Notes</label><textarea id="f_pnotes" placeholder="Why you'd call them, what they're good at...">${p.notes||''}</textarea></div>
-    <button class="btn btn-primary" onclick="savePartner(${id||'null'})">Save Partner</button>
-    ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deletePartner('+id+')">Delete Partner</button>':''}
-  `);
-}
-function savePartner(id){
-  const data = {
-    name: document.getElementById('f_pname').value.trim() || 'Unnamed partner',
-    trade: document.getElementById('f_ptrade').value.trim(),
-    phone: document.getElementById('f_pphone').value.trim(),
-    notes: document.getElementById('f_pnotes').value.trim(),
-  };
-  if(id){ Object.assign(db.partners.find(p=>p.id===id), data); }
-  else { db.partners.push({id:newId(), ...data}); }
-  saveData(); closeModal(); renderOwner();
-}
-function deletePartner(id){ db.partners = db.partners.filter(p=>p.id!==id); saveData(); closeModal(); renderOwner(); }
-
-/* On load: if this device already has a logged-in session (Supabase
-   remembers it), skip straight to the dashboard. Otherwise show the
-   sign-up/log-in screen. */
-(async function boot(){
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  document.getElementById('bootLoader').classList.add('hidden');
-  if(session){
-    currentUserId = session.user.id;
-    db = await loadFromCloud();
-    enterApp();
-  } else {
-    document.getElementById('loginScreen').classList.remove('hidden');
-  }
-})();
-</script>
 </body>
 </html>
