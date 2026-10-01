@@ -1434,11 +1434,18 @@ function saveEstimate(id){
 }
 function deleteEstimate(id){ db.estimates = db.estimates.filter(e=>e.id!==id); saveData(); closeModal(); renderOwner(); }
 
+function invoicePaidTotal(inv){ return (inv.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0); }
+function invoiceBalance(inv){ return itemsTotal(inv.items) - invoicePaidTotal(inv); }
+
 function openInvoiceModal(id){
-  const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}]};
+  const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}],payments:[]};
+  inv.payments = inv.payments || [];
   lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
   const sourceNote = inv.jobId ? `Created from job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
     : inv.estimateId ? `Created from an estimate` : '';
+  const jobTotal = itemsTotal(inv.items);
+  const paid = invoicePaidTotal(inv);
+  const balance = jobTotal - paid;
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     ${sourceNote?`<p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">${sourceNote}</p>`:''}
@@ -1457,12 +1464,72 @@ function openInvoiceModal(id){
       <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
       <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
     </div>
-    <div class="li-total">Total: <span id="liTotal">$0</span></div>
+    <div class="li-total">Job Total: <span id="liTotal">$0</span></div>
+    ${id?`
+    <div style="height:16px;border-bottom:1.5px dashed var(--line);margin:4px 0 16px;"></div>
+    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Payments</label>
+    <div id="paymentsBox">${renderPaymentsList(inv)}</div>
+    <button class="add-li-btn" onclick="openRecordPayment(${id})">+ Record Payment</button>
+    <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:13px;margin:12px 0 18px;">
+      <span>Paid to date: <strong>$${paid.toLocaleString()}</strong></span>
+      <span>Balance: <strong>$${balance.toLocaleString()}</strong></span>
+    </div>
+    `:''}
     <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send to Customer</button>`:''}
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send Invoice to Customer</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
   `);
   renderLineItems();
+}
+function renderPaymentsList(inv){
+  if(!inv.payments || !inv.payments.length) return `<p style="font-size:13px;color:rgba(28,30,34,0.45);margin:0 0 12px;">No payments recorded yet.</p>`;
+  return inv.payments.map((p,idx)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);">
+      <div>
+        <div style="font-weight:600;font-size:14px;">$${Number(p.amount).toLocaleString()} <span style="font-weight:400;color:rgba(28,30,34,0.5);font-size:12px;">· ${p.method||'Payment'}</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);">${p.date}${p.note?' · '+p.note:''}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="width:auto;padding:8px 12px;font-size:12px;" onclick="sendReceiptEmail(${inv.id},${idx})">Send Receipt</button>
+      </div>
+    </div>`).join('');
+}
+function openRecordPayment(invId){
+  document.getElementById('pickerRoot').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closePicker()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><h2>Record Payment</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        <div class="field"><label>Amount</label><input id="f_pay_amount" type="number" placeholder="500"/></div>
+        <div class="field-row">
+          <div class="field"><label>Date</label><input id="f_pay_date" type="date" value="${todayPlus(0)}"/></div>
+          <div class="field"><label>Method</label>
+            <select id="f_pay_method">
+              ${['Cash','Check','Zelle','Venmo','Card','Bank Transfer','Other'].map(m=>`<option value="${m}">${m}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Note (optional)</label><input id="f_pay_note" placeholder="Deposit, final payment..."/></div>
+        <button class="btn btn-primary" onclick="savePayment(${invId})">Save Payment</button>
+      </div>
+    </div>`;
+}
+function savePayment(invId){
+  const amount = Number(document.getElementById('f_pay_amount').value);
+  if(!amount || amount<=0){ return; }
+  const payment = {
+    amount,
+    date: document.getElementById('f_pay_date').value || todayPlus(0),
+    method: document.getElementById('f_pay_method').value,
+    note: document.getElementById('f_pay_note').value.trim(),
+  };
+  const inv = db.invoices.find(i=>i.id===invId);
+  inv.payments = inv.payments || [];
+  inv.payments.push(payment);
+  if(invoiceBalance(inv) <= 0){ inv.status = 'paid'; }
+  saveData();
+  closePicker();
+  openInvoiceModal(invId);
 }
 function saveInvoice(id){
   const data = {
@@ -1472,7 +1539,7 @@ function saveInvoice(id){
     items: lineItemsDraft.filter(i=>i.name.trim()!==''),
   };
   if(id){ Object.assign(db.invoices.find(i=>i.id===id), data); }
-  else { db.invoices.push({id:newId(), ...data}); }
+  else { db.invoices.push({id:newId(), ...data, payments:[]}); }
   saveData(); closeModal(); renderOwner();
 }
 function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
@@ -1538,7 +1605,12 @@ function sendInvoiceEmail(id){
     lines.push(`${i.name}  (x${i.qty})  —  $${lineTotal.toLocaleString()}`);
   });
   lines.push(rule);
-  lines.push(`TOTAL DUE: $${total.toLocaleString()}`);
+  lines.push(`JOB TOTAL: $${total.toLocaleString()}`);
+  const paidSoFar = invoicePaidTotal(inv);
+  if(paidSoFar > 0){
+    lines.push(`PAID TO DATE: $${paidSoFar.toLocaleString()}`);
+    lines.push(`BALANCE DUE: $${(total-paidSoFar).toLocaleString()}`);
+  }
   lines.push('');
   lines.push('Thank you for your business.');
   lines.push('');
@@ -1549,6 +1621,53 @@ function sendInvoiceEmail(id){
   const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
   window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
   if(inv.status==='draft'){ inv.status='sent'; saveData(); renderOwner(); }
+}
+
+function sendReceiptEmail(invId, paymentIdx){
+  const inv = db.invoices.find(i=>i.id===invId);
+  const cust = db.customers.find(c=>c.id===inv.customerId);
+  if(!cust || !cust.email){
+    alert('This customer has no email on file yet. Add one in Customers, then try again.');
+    return;
+  }
+  const payment = inv.payments[paymentIdx];
+  const company = db.settings.companyName || 'Our Company';
+  const owner = db.settings.ownerName || '';
+  const invoiceNum = 'INV-' + String(invId).padStart(4,'0');
+  const payDateStr = new Date(payment.date+'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const jobTotal = itemsTotal(inv.items);
+  const paidToDate = invoicePaidTotal(inv);
+  const balance = jobTotal - paidToDate;
+  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
+
+  const NL = '%0D%0A';
+  const rule = '--------------------------------------------------';
+  let lines = [];
+  lines.push(`PAYMENT RECEIPT`);
+  lines.push(company);
+  lines.push('');
+  lines.push(`Date: ${payDateStr}`);
+  lines.push(`Re: ${invoiceNum}${job ? ' — '+job.title : ''}`);
+  lines.push('');
+  lines.push(`Received from: ${cust.name}`);
+  lines.push('');
+  lines.push(rule);
+  lines.push(`AMOUNT RECEIVED: $${Number(payment.amount).toLocaleString()}`);
+  lines.push(`Method: ${payment.method}${payment.note ? ' — '+payment.note : ''}`);
+  lines.push(rule);
+  lines.push('');
+  lines.push(`Job Total: $${jobTotal.toLocaleString()}`);
+  lines.push(`Paid to Date: $${paidToDate.toLocaleString()}`);
+  lines.push(`Balance Remaining: $${balance.toLocaleString()}`);
+  lines.push('');
+  lines.push('Thank you — this confirms we received your payment.');
+  lines.push('');
+  lines.push(owner || company);
+  if(owner && company) lines.push(company);
+
+  const subject = encodeURIComponent(`Payment Receipt — ${invoiceNum} — $${Number(payment.amount).toLocaleString()}`);
+  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
+  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
 }
 
 /* ---- PRICE BOOK modal ---- */
