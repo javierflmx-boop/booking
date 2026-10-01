@@ -141,6 +141,13 @@
     color: var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
   }
+  /* Invoice status variants */
+  .chip-draft    { background: #D9D9D9; color: var(--ink); }
+  .chip-sent     { background: #FFD58A; color: var(--ink); }
+  .chip-partial  { background: var(--orange); color: var(--ink); }
+  .chip-paid     { background: #3FA34D; color: #fff; }
+  .chip-overdue  { background: #D7263D; color: #fff; }
+  .chip-void     { background: #BBBBBB; color: #555; text-decoration: line-through; }
 
   /* ---- LINE ITEMS ---- */
   table.items {
@@ -326,7 +333,7 @@
       <div class="meta-row"><span class="k2">Invoice Date</span><span class="v2">{{invoice_date}}</span></div>
       <div class="meta-row"><span class="k2">Project</span><span class="v2">Salon Build-Out, {{sqft}} SF</span></div>
       <div class="meta-row"><span class="k2">Target Completion</span><span class="v2">{{completion_date}}</span></div>
-      <div class="meta-row"><span class="k2">Status</span><span class="v2"><span class="chip">{{status}}</span></span></div>
+      <div class="meta-row"><span class="k2">Status</span><span class="v2"><span class="chip chip-{{status_class}}">{{status}}</span></span></div>
     </div>
   </div>
 
