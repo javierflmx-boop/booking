@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Invoice</title>
+<title>Estimate</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -141,13 +141,13 @@
     color: var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
   }
-  /* Invoice status variants */
-  .chip-draft    { background: #D9D9D9; color: var(--ink); }
-  .chip-sent     { background: #FFD58A; color: var(--ink); }
-  .chip-partial  { background: var(--orange); color: var(--ink); }
-  .chip-paid     { background: #3FA34D; color: #fff; }
-  .chip-overdue  { background: #D7263D; color: #fff; }
-  .chip-void     { background: #BBBBBB; color: #555; text-decoration: line-through; }
+  /* Estimate status variants */
+  .chip-draft     { background: #D9D9D9; color: var(--ink); }
+  .chip-sent      { background: #FFD58A; color: var(--ink); }
+  .chip-pending   { background: var(--orange); color: var(--ink); }
+  .chip-approved  { background: #3FA34D; color: #fff; }
+  .chip-expired   { background: #BBBBBB; color: #555; }
+  .chip-declined  { background: #D7263D; color: #fff; }
 
   /* ---- LINE ITEMS ---- */
   table.items {
@@ -284,6 +284,44 @@
   }
   .totals-row.due .v { color: var(--orange); }
 
+  /* ---- APPROVAL ---- */
+  .approval {
+    border: 2px solid var(--ink);
+    background: #FAF9F6;
+    padding: 20px 24px;
+    margin-bottom: 26px;
+  }
+  .approval-head {
+    font-family: 'Archivo Expanded', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--charcoal);
+    margin-bottom: 8px;
+  }
+  .approval-text {
+    font-size: 12px;
+    color: var(--grey);
+    line-height: 1.6;
+    margin-bottom: 22px;
+  }
+  .approval-sign {
+    display: flex;
+    gap: 40px;
+  }
+  .sign-block { flex: 1; }
+  .sign-line {
+    border-bottom: 2px solid var(--ink);
+    height: 34px;
+  }
+  .sign-label {
+    font-size: 11px;
+    color: var(--grey);
+    font-weight: 600;
+    margin-top: 6px;
+  }
+
   /* ---- FOOTER ---- */
   .footer {
     display: flex;
@@ -319,8 +357,8 @@
       </div>
     </div>
     <div class="invoice-tag">
-      <div class="label">INVOICE</div>
-      <div class="num">No. {{invoice_number}}</div>
+      <div class="label">ESTIMATE</div>
+      <div class="num">No. {{estimate_number}}</div>
     </div>
   </div>
 
@@ -330,9 +368,10 @@
       <div class="v">{{client_name}}<br>{{project_address}}</div>
     </div>
     <div class="meta-block">
-      <div class="meta-row"><span class="k2">Invoice Date</span><span class="v2">{{invoice_date}}</span></div>
+      <div class="meta-row"><span class="k2">Estimate Date</span><span class="v2">{{estimate_date}}</span></div>
+      <div class="meta-row"><span class="k2">Valid Until</span><span class="v2">{{valid_until}}</span></div>
       <div class="meta-row"><span class="k2">Project</span><span class="v2">Salon Build-Out, {{sqft}} SF</span></div>
-      <div class="meta-row"><span class="k2">Target Completion</span><span class="v2">{{completion_date}}</span></div>
+      <div class="meta-row"><span class="k2">Est. Completion</span><span class="v2">{{completion_date}}</span></div>
       <div class="meta-row"><span class="k2">Status</span><span class="v2"><span class="chip chip-{{status_class}}">{{status}}</span></span></div>
     </div>
   </div>
@@ -350,7 +389,7 @@
           <div class="desc-title">Salon Renovation — Full Scope of Work</div>
           <div class="desc-sub">See full itemized scope of work below.</div>
         </td>
-        <td class="amt">{{contract_total}}</td>
+        <td class="amt">{{estimate_total}}</td>
       </tr>
     </tbody>
   </table>
@@ -383,8 +422,7 @@
       <div class="scope-cat">
         <div class="cat-title">Ceiling</div>
         <ul>
-          <li>Remove the existing 24"x48" halogen panel fixtures</li>
-          <li>See Scope Change note below for the ceiling panel/paint revision</li>
+          <li>Remove the existing 24"x48" halogen panel fixtures and replace throughout</li>
         </ul>
       </div>
     </div>
@@ -427,24 +465,36 @@
   </div>
 
   <div class="notice">
-    <div class="t">Scope Change — Agreed by Both Parties</div>
-    <b>Original:</b> Remove and replace all ceiling panels with new panels throughout.
-    &nbsp;→&nbsp;
-    <b>Revised:</b> Repair existing ceiling and finish with full black paint throughout, in place of new panel replacement.
+    <div class="t">Deposit to Begin Work</div>
+    <b>{{deposit_amount}}</b> required to schedule and begin this project. Remaining balance is paid in milestone payments tied to project phases, outlined once this estimate is approved.
   </div>
 
   <div class="totals">
     <div class="totals-box">
-      <div class="totals-row"><span class="k">Contract Total</span><span class="v">{{contract_total}}</span></div>
-      <div class="totals-row"><span class="k">Paid to Date</span><span class="v">{{paid_to_date}}</span></div>
-      <div class="totals-row due"><span class="k">Balance Due</span><span class="v">{{balance_due}}</span></div>
-      <div class="totals-row grand"><span class="k">Total</span><span class="v">{{contract_total}}</span></div>
+      <div class="totals-row"><span class="k">Estimated Total</span><span class="v">{{estimate_total}}</span></div>
+      <div class="totals-row due"><span class="k">Deposit to Start</span><span class="v">{{deposit_amount}}</span></div>
+      <div class="totals-row grand"><span class="k">Total</span><span class="v">{{estimate_total}}</span></div>
+    </div>
+  </div>
+
+  <div class="approval">
+    <div class="approval-head">Approval to Proceed</div>
+    <div class="approval-text">By signing below, client approves the scope of work and total estimated price above, and authorizes 407 Renovations to proceed per the terms outlined. This estimate is valid until {{valid_until}}; pricing may be subject to change after this date.</div>
+    <div class="approval-sign">
+      <div class="sign-block">
+        <div class="sign-line"></div>
+        <div class="sign-label">Client Signature / Date</div>
+      </div>
+      <div class="sign-block">
+        <div class="sign-line"></div>
+        <div class="sign-label">Javier Flores — 407 Renovations / Date</div>
+      </div>
     </div>
   </div>
 
   <div class="footer">
     <div class="terms">
-      This invoice reflects the agreed full project scope and total contract price. It is not an itemized accounting of materials or labor costs. Payments recorded via {{payment_method}}.
+      This estimate reflects the full project scope described above. It is not an itemized accounting of materials or labor costs, and is subject to the terms of the signed project agreement once approved.
       <br><br>
       {{license_line}}
     </div>
