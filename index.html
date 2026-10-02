@@ -216,6 +216,8 @@
   .ticket.status-paused .stripe{background:#8a8f98;}
   .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
   .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
+  .ticket.status-partial .stripe{background:var(--blue-soft);}
+  .ticket.status-void .stripe{background:#8a8f98;}
   .ticket .punch-hole{
     position:absolute;left:-7px;top:50%;transform:translateY(-50%);
     width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);
@@ -234,6 +236,8 @@
   .status-tag.paused{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;}
   .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.1);color:var(--green);border-color:var(--green);}
   .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);border-color:var(--red);}
+  .status-tag.partial{background:rgba(74,126,155,0.12);color:var(--blue-soft);border-color:var(--blue-soft);}
+  .status-tag.void{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;text-decoration:line-through;}
 
   .empty-state{ text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4); }
   .empty-state .glyph{font-size:32px;margin-bottom:8px;}
@@ -792,7 +796,7 @@ function partnerHTML(p){
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
   scheduled:'var(--blue)', in_progress:'var(--orange)', paused:'#8a8f98', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
-  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
+  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)', partial:'var(--blue-soft)', void:'#8a8f98'
 };
 function renderPulse(elId, list, statuses, title){
   const total = list.length;
@@ -815,7 +819,7 @@ function renderOwner(){
   document.getElementById('ownerCoName').innerHTML = (db.settings.companyName||'MY COMPANY').toUpperCase() + '<span class="dot">.</span>';
   renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','paused','completed','invoiced','cancelled'], 'Jobs');
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
-  renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
+  renderPulse('pulseInvoices', db.invoices, ['draft','sent','partial','paid','overdue','void'], 'Invoices');
 
   document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><p>No jobs today. Tap + to create one.</p></div>`;
   document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(1)).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
@@ -1005,8 +1009,10 @@ const BREAKDOWN_CONFIG = {
   invoices: { title:'Invoices Breakdown', baseColor:'#233D4D', statuses:[
     {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
     {key:'sent', label:'Sent', sub:'Awaiting payment', h:'bd-h2'},
+    {key:'partial', label:'Partial', sub:'Some paid, balance left', h:'bd-h2'},
     {key:'paid', label:'Paid', sub:'Money in', h:'bd-h3'},
     {key:'overdue', label:'Overdue', sub:'Follow up', h:'bd-h4'},
+    {key:'void', label:'Void', sub:'Cancelled', h:'bd-h4'},
   ]},
 };
 function getListForType(type){ return type==='jobs' ? db.jobs : type==='estimates' ? db.estimates : db.invoices; }
@@ -1446,7 +1452,7 @@ function openInvoiceModal(id){
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_istatus">
-          ${['draft','sent','paid','overdue'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+          ${['draft','sent','partial','paid','overdue','void'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Due date</label><input id="f_due" type="date" value="${inv.due||''}"/></div>
