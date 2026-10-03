@@ -122,7 +122,7 @@
   /* ---------- COMPOSITE NAV CARD (tappable squares/rectangles) ---------- */
   .composite-card{
     display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
-    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money" "pricebook pricebook pricebook" "partners partners partners";
+    grid-template-areas:"logo logo chrome" "stripe money money" "agenda money money" "pricebook pricebook pricebook" "partners partners partners" "settings settings settings";
     gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:14px;
     overflow:hidden;box-shadow:var(--shadow-hard);margin-bottom:4px;
   }
@@ -150,6 +150,9 @@
   .cc-partners{grid-area:partners;background:var(--charcoal);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
   .cc-partners .cc-pb-label{font-size:16px;font-weight:700;color:#fff;}
   .cc-partners .cc-tag{color:var(--orange);}
+  .cc-settings{grid-area:settings;background:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;min-height:58px;}
+  .cc-settings .cc-pb-label{font-size:16px;font-weight:700;color:var(--ink);}
+  .cc-settings .cc-tag{color:var(--blue);}
 
   /* ---------- MONTH CALENDAR ---------- */
   .cal-wrap{background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-hard);padding:16px;margin-bottom:22px;}
@@ -216,8 +219,6 @@
   .ticket.status-paused .stripe{background:#8a8f98;}
   .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
   .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
-  .ticket.status-partial .stripe{background:var(--blue-soft);}
-  .ticket.status-void .stripe{background:#8a8f98;}
   .ticket .punch-hole{
     position:absolute;left:-7px;top:50%;transform:translateY(-50%);
     width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);
@@ -236,8 +237,6 @@
   .status-tag.paused{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;}
   .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.1);color:var(--green);border-color:var(--green);}
   .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);border-color:var(--red);}
-  .status-tag.partial{background:rgba(74,126,155,0.12);color:var(--blue-soft);border-color:var(--blue-soft);}
-  .status-tag.void{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;text-decoration:line-through;}
 
   .empty-state{ text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4); }
   .empty-state .glyph{font-size:32px;margin-bottom:8px;}
@@ -378,6 +377,10 @@
         <div class="cc-cell cc-partners" onclick="openPartners()">
           <span class="cc-pb-label">Partners</span>
           <span class="cc-tag">→ See contacts</span>
+        </div>
+        <div class="cc-cell cc-settings" onclick="openSettingsModal()">
+          <span class="cc-pb-label">Settings</span>
+          <span class="cc-tag">→ Company & more</span>
         </div>
       </div>
 
@@ -571,7 +574,7 @@ const seedData = {
   leads: [
     {id:1, name:"Andre Walsh", phone:"(407) 555-0177", source:"Referral", notes:"Wants a quote for a screened patio.", status:"open"},
   ],
-  settings: { companyName:"407 Renovations", ownerName:"Javier Flores", address:"2347 Quaker Ct, Orlando, FL 32837", phone:"(407) 432-1935", email:"javierflmx@me.com", license:"" },
+  settings: { companyName:"407 Renovations", ownerName:"Javier" },
   availability: [],
   helpers: [],
   nextId: 100
@@ -637,7 +640,7 @@ async function loadFromCloud(){
 function freshBlankData(){
   return {
     customers: [], jobs: [], leads: [], estimates: [], invoices: [],
-    settings: { companyName:"My Company", ownerName:"", address:"", phone:"", email:"", license:"" },
+    settings: { companyName:"My Company", ownerName:"" },
     availability: [], priceBook: [], partners: [], helpers: [], nextId: 1
   };
 }
@@ -796,7 +799,7 @@ function partnerHTML(p){
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
   scheduled:'var(--blue)', in_progress:'var(--orange)', paused:'#8a8f98', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
-  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)', partial:'var(--blue-soft)', void:'#8a8f98'
+  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
 };
 function renderPulse(elId, list, statuses, title){
   const total = list.length;
@@ -819,7 +822,7 @@ function renderOwner(){
   document.getElementById('ownerCoName').innerHTML = (db.settings.companyName||'MY COMPANY').toUpperCase() + '<span class="dot">.</span>';
   renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','paused','completed','invoiced','cancelled'], 'Jobs');
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
-  renderPulse('pulseInvoices', db.invoices, ['draft','sent','partial','paid','overdue','void'], 'Invoices');
+  renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
 
   document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><p>No jobs today. Tap + to create one.</p></div>`;
   document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(1)).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
@@ -1009,10 +1012,8 @@ const BREAKDOWN_CONFIG = {
   invoices: { title:'Invoices Breakdown', baseColor:'#233D4D', statuses:[
     {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
     {key:'sent', label:'Sent', sub:'Awaiting payment', h:'bd-h2'},
-    {key:'partial', label:'Partial', sub:'Some paid, balance left', h:'bd-h2'},
     {key:'paid', label:'Paid', sub:'Money in', h:'bd-h3'},
     {key:'overdue', label:'Overdue', sub:'Follow up', h:'bd-h4'},
-    {key:'void', label:'Void', sub:'Cancelled', h:'bd-h4'},
   ]},
 };
 function getListForType(type){ return type==='jobs' ? db.jobs : type==='estimates' ? db.estimates : db.invoices; }
@@ -1157,12 +1158,6 @@ function openSettingsModal(){
     <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Company name</label><input id="f_companyName" value="${(db.settings.companyName||'').replace(/"/g,'&quot;')}" placeholder="407 Renovations"/></div>
     <div class="field"><label>Owner name</label><input id="f_ownerName" value="${(db.settings.ownerName||'').replace(/"/g,'&quot;')}" placeholder="Your name"/></div>
-    <div class="field"><label>Business address</label><input id="f_address" value="${(db.settings.address||'').replace(/"/g,'&quot;')}" placeholder="Street, city, state, zip"/></div>
-    <div class="field-row">
-      <div class="field"><label>Phone</label><input id="f_bizPhone" value="${(db.settings.phone||'').replace(/"/g,'&quot;')}" placeholder="(407) 555-0100"/></div>
-      <div class="field"><label>Email</label><input id="f_bizEmail" value="${(db.settings.email||'').replace(/"/g,'&quot;')}" placeholder="you@company.com"/></div>
-    </div>
-    <div class="field"><label>License # (optional)</label><input id="f_license" value="${(db.settings.license||'').replace(/"/g,'&quot;')}" placeholder="Leave blank if none yet"/></div>
     <button class="btn btn-primary" onclick="saveSettings()">Save</button>
     <div style="height:22px;border-bottom:2px dashed var(--line);margin:22px 0;"></div>
     <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:10px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Helpers</label>
@@ -1206,10 +1201,6 @@ function removeHelper(id){
 function saveSettings(){
   db.settings.companyName = document.getElementById('f_companyName').value.trim() || '407 Renovations';
   db.settings.ownerName = document.getElementById('f_ownerName').value.trim();
-  db.settings.address = document.getElementById('f_address').value.trim();
-  db.settings.phone = document.getElementById('f_bizPhone').value.trim();
-  db.settings.email = document.getElementById('f_bizEmail').value.trim();
-  db.settings.license = document.getElementById('f_license').value.trim();
   saveData(); closeModal(); renderOwner();
 }
 function confirmClearAll(){
@@ -1238,9 +1229,6 @@ function openAddMenu(){
           <div class="action-row" onclick="closeModal();openCustomerModal()">Customer</div>
           <div class="action-row" onclick="closeModal();openPriceItemModal()">Price Item</div>
           <div class="action-row" onclick="closeModal();openPartnerModal()">Partner</div>
-        </div>
-        <div class="action-group">
-          <div class="action-row" style="color:var(--orange);" onclick="closeModal();openImportModal()">📋 Paste from Claude</div>
         </div>
         <div class="action-cancel" onclick="closeModal()">Cancel</div>
       </div>
@@ -1453,11 +1441,18 @@ function saveEstimate(id){
 }
 function deleteEstimate(id){ db.estimates = db.estimates.filter(e=>e.id!==id); saveData(); closeModal(); renderOwner(); }
 
+function invoicePaidTotal(inv){ return (inv.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0); }
+function invoiceBalance(inv){ return itemsTotal(inv.items) - invoicePaidTotal(inv); }
+
 function openInvoiceModal(id){
-  const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}]};
+  const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}],payments:[]};
+  inv.payments = inv.payments || [];
   lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
   const sourceNote = inv.jobId ? `Created from job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
     : inv.estimateId ? `Created from an estimate` : '';
+  const jobTotal = itemsTotal(inv.items);
+  const paid = invoicePaidTotal(inv);
+  const balance = jobTotal - paid;
   openModal(`
     <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     ${sourceNote?`<p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">${sourceNote}</p>`:''}
@@ -1465,7 +1460,7 @@ function openInvoiceModal(id){
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_istatus">
-          ${['draft','sent','partial','paid','overdue','void'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+          ${['draft','sent','paid','overdue'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Due date</label><input id="f_due" type="date" value="${inv.due||''}"/></div>
@@ -1476,13 +1471,72 @@ function openInvoiceModal(id){
       <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItem()">+ Blank line</button>
       <button class="add-li-btn" style="margin-bottom:0;" onclick="addLineItemFromPriceBook()">+ From Price Book</button>
     </div>
-    <div class="li-total">Total: <span id="liTotal">$0</span></div>
+    <div class="li-total">Job Total: <span id="liTotal">$0</span></div>
+    ${id?`
+    <div style="height:16px;border-bottom:1.5px dashed var(--line);margin:4px 0 16px;"></div>
+    <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Payments</label>
+    <div id="paymentsBox">${renderPaymentsList(inv)}</div>
+    <button class="add-li-btn" onclick="openRecordPayment(${id})">+ Record Payment</button>
+    <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:13px;margin:12px 0 18px;">
+      <span>Paid to date: <strong>$${paid.toLocaleString()}</strong></span>
+      <span>Balance: <strong>$${balance.toLocaleString()}</strong></span>
+    </div>
+    `:''}
     <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="viewInvoiceDocument(${id})">View / Print Invoice</button>`:''}
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send to Customer</button>`:''}
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send Invoice to Customer</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
   `);
   renderLineItems();
+}
+function renderPaymentsList(inv){
+  if(!inv.payments || !inv.payments.length) return `<p style="font-size:13px;color:rgba(28,30,34,0.45);margin:0 0 12px;">No payments recorded yet.</p>`;
+  return inv.payments.map((p,idx)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);">
+      <div>
+        <div style="font-weight:600;font-size:14px;">$${Number(p.amount).toLocaleString()} <span style="font-weight:400;color:rgba(28,30,34,0.5);font-size:12px;">· ${p.method||'Payment'}</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);">${p.date}${p.note?' · '+p.note:''}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="width:auto;padding:8px 12px;font-size:12px;" onclick="sendReceiptEmail(${inv.id},${idx})">Send Receipt</button>
+      </div>
+    </div>`).join('');
+}
+function openRecordPayment(invId){
+  document.getElementById('pickerRoot').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closePicker()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><h2>Record Payment</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        <div class="field"><label>Amount</label><input id="f_pay_amount" type="number" placeholder="500"/></div>
+        <div class="field-row">
+          <div class="field"><label>Date</label><input id="f_pay_date" type="date" value="${todayPlus(0)}"/></div>
+          <div class="field"><label>Method</label>
+            <select id="f_pay_method">
+              ${['Cash','Check','Zelle','Venmo','Card','Bank Transfer','Other'].map(m=>`<option value="${m}">${m}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Note (optional)</label><input id="f_pay_note" placeholder="Deposit, final payment..."/></div>
+        <button class="btn btn-primary" onclick="savePayment(${invId})">Save Payment</button>
+      </div>
+    </div>`;
+}
+function savePayment(invId){
+  const amount = Number(document.getElementById('f_pay_amount').value);
+  if(!amount || amount<=0){ return; }
+  const payment = {
+    amount,
+    date: document.getElementById('f_pay_date').value || todayPlus(0),
+    method: document.getElementById('f_pay_method').value,
+    note: document.getElementById('f_pay_note').value.trim(),
+  };
+  const inv = db.invoices.find(i=>i.id===invId);
+  inv.payments = inv.payments || [];
+  inv.payments.push(payment);
+  if(invoiceBalance(inv) <= 0){ inv.status = 'paid'; }
+  saveData();
+  closePicker();
+  openInvoiceModal(invId);
 }
 function saveInvoice(id){
   const data = {
@@ -1492,7 +1546,7 @@ function saveInvoice(id){
     items: lineItemsDraft.filter(i=>i.name.trim()!==''),
   };
   if(id){ Object.assign(db.invoices.find(i=>i.id===id), data); }
-  else { db.invoices.push({id:newId(), ...data}); }
+  else { db.invoices.push({id:newId(), ...data, payments:[]}); }
   saveData(); closeModal(); renderOwner();
 }
 function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
@@ -1523,221 +1577,104 @@ function convertEstimateToInvoice(estimateId){
   renderOwner();
   openInvoiceModal(newInv.id);
 }
-/* ---- PASTE FROM CLAUDE (import) ---- */
-function openImportModal(){
-  openModal(`
-    <div class="sheet-head"><h2>Paste from Claude</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <p style="font-size:13px;color:rgba(28,30,34,0.6);margin:-6px 0 14px;line-height:1.5;">Paste the block Claude gives you after building an invoice or estimate. It'll create the customer (if new) and the invoice/estimate automatically.</p>
-    <div class="field"><textarea id="f_importText" rows="10" placeholder='Paste the {...} block here' style="min-height:220px;font-family:monospace;font-size:12px;"></textarea></div>
-    <div id="importError" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;"></div>
-    <button class="btn btn-primary" onclick="runImport()">Import</button>
-  `);
-}
-function findOrCreateCustomer(c){
-  if(!c || !c.name) return db.customers[0]?.id || null;
-  let existing = db.customers.find(x=>x.name.trim().toLowerCase()===c.name.trim().toLowerCase());
-  if(existing) return existing.id;
-  const newCust = {id:newId(), name:c.name, phone:c.phone||'', email:c.email||'', address:c.address||'', notes:''};
-  db.customers.push(newCust);
-  return newCust.id;
-}
-function runImport(){
-  const raw = document.getElementById('f_importText').value.trim();
-  const errEl = document.getElementById('importError');
-  errEl.style.display = 'none';
-  let data;
-  try{ data = JSON.parse(raw); }
-  catch(e){ errEl.textContent = "Couldn't read that — make sure you copied the whole block, including the { and } at the start and end."; errEl.style.display='block'; return; }
-
-  if(!data.type || !['invoice','estimate'].includes(data.type)){
-    errEl.textContent = 'Missing or invalid "type" — must be "invoice" or "estimate".'; errEl.style.display='block'; return;
-  }
-  const customerId = findOrCreateCustomer(data.customer);
-  const items = (data.items||[]).map(i=>({name:i.name||'Item', qty:Number(i.qty)||1, price:Number(i.price)||0}));
-  // Optional rich content — the full "Project Scope of Work" categories and a
-  // scope-change note, same as the standalone branded template. If present,
-  // the invoice/estimate document will render them in full.
-  const scopeCategories = Array.isArray(data.scopeCategories) ? data.scopeCategories : null;
-  const scopeChange = (data.scopeChange && data.scopeChange.original) ? data.scopeChange : null;
-
-  if(data.type==='invoice'){
-    const newInv = {id:newId(), customerId, status:data.status||'draft', due:data.due||'', items, scopeCategories, scopeChange};
-    db.invoices.push(newInv);
-    saveData(); closeModal(); renderOwner();
-    openInvoiceModal(newInv.id);
-  } else {
-    const newEst = {id:newId(), customerId, status:data.status||'draft', date:data.date||'', items, scopeCategories, scopeChange};
-    db.estimates.push(newEst);
-    saveData(); closeModal(); renderOwner();
-    openEstimateModal(newEst.id);
-  }
-}
-
-/* ---- BRANDED INVOICE DOCUMENT (view / print) ---- */
-const INVOICE_STATUS_COLORS = {
-  draft:{bg:'#D9D9D9',fg:'#1A1A1A'}, sent:{bg:'#FFD58A',fg:'#1A1A1A'},
-  partial:{bg:'#FE7F2D',fg:'#1A1A1A'}, paid:{bg:'#3FA34D',fg:'#FFFFFF'},
-  overdue:{bg:'#D7263D',fg:'#FFFFFF'}, void:{bg:'#BBBBBB',fg:'#555555'}
-};
-function generateInvoiceDocHTML(id){
-  const inv = db.invoices.find(i=>i.id===id);
-  const cust = db.customers.find(c=>c.id===inv.customerId) || {name:'',address:''};
-  const total = itemsTotal(inv.items);
-  const s = db.settings;
-  const companyName = (s.companyName||'MY COMPANY').toUpperCase();
-  const logoMark = (companyName.split(' ')[0] || companyName).slice(0,4);
-  const chipClass = 'chip-' + (inv.status||'draft');
-  const rows = inv.items.map((it,idx)=>`
-    <tr>
-      <td><div class="desc-title">${it.name}</div></td>
-      <td class="amt">${it.qty}</td>
-      <td class="amt">$${Number(it.price).toLocaleString()}</td>
-      <td class="amt" style="font-weight:700;">$${(it.qty*it.price).toLocaleString()}</td>
-    </tr>`).join('');
-  // Optional rich content, present only when this invoice was imported
-  // with a full scope breakdown and/or a documented scope change.
-  let scopeHTML = '';
-  if(inv.scopeCategories && inv.scopeCategories.length){
-    const half = Math.ceil(inv.scopeCategories.length/2);
-    const colHTML = (cats)=>cats.map(c=>`
-        <div class="scope-cat">
-          <div class="cat-title">${c.category}</div>
-          <ul>${(c.items||[]).map(it=>`<li>${it}</li>`).join('')}</ul>
-        </div>`).join('');
-    scopeHTML = `
-    <div class="scope-head">Project Scope of Work</div>
-    <div class="scope-grid">
-      <div>${colHTML(inv.scopeCategories.slice(0,half))}</div>
-      <div>${colHTML(inv.scopeCategories.slice(half))}</div>
-    </div>`;
-  }
-  let scopeChangeHTML = '';
-  if(inv.scopeChange && inv.scopeChange.original){
-    scopeChangeHTML = `
-    <div class="notice">
-      <div class="t">Scope Change — Agreed by Both Parties</div>
-      <b>Original:</b> ${inv.scopeChange.original} &nbsp;→&nbsp;
-      <b>Revised:</b> ${inv.scopeChange.revised||''}
-    </div>`;
-  }
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice — ${cust.name}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
-    :root{ --charcoal:#233D4D; --orange:#FE7F2D; --paper:#FFFFFF; --ink:#1A1A1A; --grey:#6B6B6B; --line:#E4E1DA; }
-    *{box-sizing:border-box;}
-    body{margin:0;background:#F4F2EE;font-family:'Inter',sans-serif;color:var(--ink);}
-    .sheet{width:850px;margin:32px auto;background:var(--paper);border:3px solid var(--ink);box-shadow:10px 10px 0 var(--orange);padding:48px 52px 40px;}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:4px solid var(--ink);padding-bottom:24px;margin-bottom:28px;}
-    .brand{display:flex;align-items:center;gap:14px;}
-    .brand-mark{width:54px;height:54px;background:var(--charcoal);border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:4px 4px 0 var(--orange);flex-shrink:0;}
-    .brand-mark span{font-family:'Archivo Expanded',sans-serif;font-weight:800;color:#fff;font-size:15px;}
-    .brand-name{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:24px;letter-spacing:-0.5px;color:var(--ink);line-height:1.1;}
-    .brand-sub{font-size:12px;color:var(--grey);margin-top:4px;letter-spacing:0.3px;}
-    .invoice-tag{text-align:right;}
-    .invoice-tag .label{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:30px;color:var(--orange);letter-spacing:1px;-webkit-text-stroke:1px var(--ink);}
-    .invoice-tag .num{font-size:13px;color:var(--grey);margin-top:2px;font-weight:600;}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;}
-    .meta-block{border:2px solid var(--ink);padding:14px 16px;background:#FAF9F6;}
-    .meta-block .k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--grey);font-weight:700;margin-bottom:6px;}
-    .meta-block .v{font-size:14px;font-weight:600;line-height:1.5;}
-    .meta-row{display:flex;justify-content:space-between;font-size:13px;margin-top:6px;}
-    .meta-row .k2{color:var(--grey);font-weight:600;}
-    .meta-row .v2{font-weight:700;}
-    .chip{display:inline-block;font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);}
-    .chip-draft{background:#D9D9D9;color:var(--ink);} .chip-sent{background:#FFD58A;color:var(--ink);}
-    .chip-partial{background:var(--orange);color:var(--ink);} .chip-paid{background:#3FA34D;color:#fff;}
-    .chip-overdue{background:#D7263D;color:#fff;} .chip-void{background:#BBBBBB;color:#555;text-decoration:line-through;}
-    table.items{width:100%;border-collapse:collapse;margin-bottom:20px;border:2px solid var(--ink);}
-    table.items thead th{background:var(--ink);color:#fff;font-family:'Archivo Expanded',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;padding:10px 14px;text-align:left;}
-    table.items thead th.amt{text-align:right;}
-    table.items tbody td{padding:14px;border-top:1px solid var(--line);font-size:14px;vertical-align:top;}
-    table.items tbody td.amt{text-align:right;font-weight:700;white-space:nowrap;}
-    table.items tbody .desc-title{font-weight:700;}
-    table.items tbody tr:nth-child(even){background:#FAF9F6;}
-    .scope-head{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:13px;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink);border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:14px;}
-    .scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 36px;margin-bottom:26px;}
-    .scope-cat{margin-bottom:16px;break-inside:avoid;}
-    .scope-cat .cat-title{font-family:'Archivo Expanded',sans-serif;font-weight:700;font-size:12.5px;color:var(--orange);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;padding-left:10px;border-left:3px solid var(--orange);}
-    .scope-cat ul{margin:0;padding:0 0 0 10px;list-style:none;}
-    .scope-cat li{font-size:12px;line-height:1.55;color:var(--ink);position:relative;padding-left:12px;}
-    .scope-cat li::before{content:"•";position:absolute;left:0;color:var(--grey);}
-    .notice{border:2px dashed var(--orange);background:#FFF6EE;padding:14px 16px;margin-bottom:24px;font-size:12.5px;}
-    .notice .t{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--orange);margin-bottom:6px;}
-    .notice b{color:var(--ink);}
-    .totals{display:flex;justify-content:flex-end;margin-bottom:30px;}
-    .totals-box{width:320px;border:2px solid var(--ink);}
-    .totals-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13.5px;border-bottom:1px solid var(--line);}
-    .totals-row .k{color:var(--grey);font-weight:600;} .totals-row .v{font-weight:700;}
-    .totals-row.grand{background:var(--charcoal);border-bottom:none;}
-    .totals-row.grand .k, .totals-row.grand .v{color:#fff;font-family:'Archivo Expanded',sans-serif;font-size:16px;font-weight:800;}
-    .footer{display:flex;justify-content:space-between;align-items:flex-end;border-top:3px solid var(--ink);padding-top:20px;}
-    .footer .terms{font-size:11.5px;color:var(--grey);max-width:440px;line-height:1.6;}
-    .footer .pay{text-align:right;font-size:12.5px;}
-    .footer .pay .k{font-weight:700;margin-bottom:4px;}
-    .print-bar{width:850px;margin:0 auto 12px;text-align:right;}
-    .print-btn{background:var(--orange);color:#fff;border:2px solid var(--ink);padding:10px 18px;font-weight:700;border-radius:8px;cursor:pointer;font-size:14px;font-family:'Inter',sans-serif;}
-    @media print{ .print-bar{display:none;} body{background:#fff;} .sheet{box-shadow:none;margin:0;border:none;} }
-  </style></head><body>
-  <div class="print-bar"><button class="print-btn" onclick="window.print()">Print / Save as PDF</button></div>
-  <div class="sheet">
-    <div class="header">
-      <div class="brand">
-        <div class="brand-mark"><span>${logoMark}</span></div>
-        <div>
-          <div class="brand-name">${companyName}</div>
-          <div class="brand-sub">${s.ownerName||''}${s.ownerName?', Owner':''} &nbsp;•&nbsp; ${s.address||''}</div>
-          <div class="brand-sub">${s.phone||''}${s.phone&&s.email?' &nbsp;•&nbsp; ':''}${s.email||''}</div>
-        </div>
-      </div>
-      <div class="invoice-tag"><div class="label">INVOICE</div><div class="num">No. ${String(inv.id).padStart(4,'0')}</div></div>
-    </div>
-    <div class="meta">
-      <div class="meta-block"><div class="k">Bill To</div><div class="v">${cust.name}<br>${cust.address||''}</div></div>
-      <div class="meta-block">
-        <div class="meta-row"><span class="k2">Due Date</span><span class="v2">${inv.due||'—'}</span></div>
-        <div class="meta-row"><span class="k2">Status</span><span class="v2"><span class="chip ${chipClass}">${inv.status}</span></span></div>
-      </div>
-    </div>
-    <table class="items">
-      <thead><tr><th style="width:55%">Description</th><th class="amt">Qty</th><th class="amt">Price</th><th class="amt">Total</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    ${scopeHTML}
-    ${scopeChangeHTML}
-    <div class="totals"><div class="totals-box">
-      <div class="totals-row grand"><span class="k">Total</span><span class="v">$${total.toLocaleString()}</span></div>
-    </div></div>
-    <div class="footer">
-      <div class="terms">This invoice reflects the agreed scope and total price. It is not an itemized accounting of materials or labor costs.${s.license?('<br><br>Licensed &amp; Insured — License #'+s.license):''}</div>
-      <div class="pay">
-        <div class="k">${s.ownerName||s.companyName||''}</div>
-        <div>${s.companyName||''}</div>
-        <div>${s.address||''}</div>
-        <div>${s.email||''} ${s.phone?('&nbsp;•&nbsp; '+s.phone):''}</div>
-      </div>
-    </div>
-  </div>
-  </body></html>`;
-}
-function viewInvoiceDocument(id){
-  const html = generateInvoiceDocHTML(id);
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
-}
 function sendInvoiceEmail(id){
   const inv = db.invoices.find(i=>i.id===id);
   const cust = db.customers.find(c=>c.id===inv.customerId);
-  const total = itemsTotal(inv.items);
-  const lines = inv.items.map(i=>`- ${i.name} x${i.qty}: $${(i.qty*i.price).toLocaleString()}`).join('%0D%0A');
-  const subject = encodeURIComponent(`Invoice from ${db.settings.companyName||'us'}`);
-  const body = `Hi ${cust?cust.name:''},%0D%0A%0D%0AHere is your invoice:%0D%0A%0D%0A${lines}%0D%0A%0D%0ATotal: $${total.toLocaleString()}%0D%0A%0D%0AThanks,%0D%0A${db.settings.ownerName||db.settings.companyName||''}`;
   if(!cust || !cust.email){
     alert('This customer has no email on file yet. Add one in Customers, then try again.');
     return;
   }
+  const total = itemsTotal(inv.items);
+  const company = db.settings.companyName || 'Our Company';
+  const owner = db.settings.ownerName || '';
+  const invoiceNum = 'INV-' + String(id).padStart(4,'0');
+  const todayStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const dueStr = inv.due ? new Date(inv.due+'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : null;
+  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
+
+  const NL = '%0D%0A';
+  const rule = '--------------------------------------------------';
+  let lines = [];
+  lines.push(`INVOICE ${invoiceNum}`);
+  lines.push(company);
+  lines.push('');
+  lines.push(`Date: ${todayStr}`);
+  if(dueStr) lines.push(`Due: ${dueStr}`);
+  if(job) lines.push(`Re: ${job.title}`);
+  lines.push('');
+  lines.push('Bill To:');
+  lines.push(cust.name);
+  if(cust.address) lines.push(cust.address);
+  lines.push('');
+  lines.push(rule);
+  inv.items.forEach(i=>{
+    const lineTotal = (Number(i.qty)||0) * (Number(i.price)||0);
+    lines.push(`${i.name}  (x${i.qty})  —  $${lineTotal.toLocaleString()}`);
+  });
+  lines.push(rule);
+  lines.push(`JOB TOTAL: $${total.toLocaleString()}`);
+  const paidSoFar = invoicePaidTotal(inv);
+  if(paidSoFar > 0){
+    lines.push(`PAID TO DATE: $${paidSoFar.toLocaleString()}`);
+    lines.push(`BALANCE DUE: $${(total-paidSoFar).toLocaleString()}`);
+  }
+  lines.push('');
+  lines.push('Thank you for your business.');
+  lines.push('');
+  lines.push(owner || company);
+  if(owner && company) lines.push(company);
+
+  const subject = encodeURIComponent(`${invoiceNum} from ${company}`);
+  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
   window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
   if(inv.status==='draft'){ inv.status='sent'; saveData(); renderOwner(); }
+}
+
+function sendReceiptEmail(invId, paymentIdx){
+  const inv = db.invoices.find(i=>i.id===invId);
+  const cust = db.customers.find(c=>c.id===inv.customerId);
+  if(!cust || !cust.email){
+    alert('This customer has no email on file yet. Add one in Customers, then try again.');
+    return;
+  }
+  const payment = inv.payments[paymentIdx];
+  const company = db.settings.companyName || 'Our Company';
+  const owner = db.settings.ownerName || '';
+  const invoiceNum = 'INV-' + String(invId).padStart(4,'0');
+  const payDateStr = new Date(payment.date+'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const jobTotal = itemsTotal(inv.items);
+  const paidToDate = invoicePaidTotal(inv);
+  const balance = jobTotal - paidToDate;
+  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
+
+  const NL = '%0D%0A';
+  const rule = '--------------------------------------------------';
+  let lines = [];
+  lines.push(`PAYMENT RECEIPT`);
+  lines.push(company);
+  lines.push('');
+  lines.push(`Date: ${payDateStr}`);
+  lines.push(`Re: ${invoiceNum}${job ? ' — '+job.title : ''}`);
+  lines.push('');
+  lines.push(`Received from: ${cust.name}`);
+  lines.push('');
+  lines.push(rule);
+  lines.push(`AMOUNT RECEIVED: $${Number(payment.amount).toLocaleString()}`);
+  lines.push(`Method: ${payment.method}${payment.note ? ' — '+payment.note : ''}`);
+  lines.push(rule);
+  lines.push('');
+  lines.push(`Job Total: $${jobTotal.toLocaleString()}`);
+  lines.push(`Paid to Date: $${paidToDate.toLocaleString()}`);
+  lines.push(`Balance Remaining: $${balance.toLocaleString()}`);
+  lines.push('');
+  lines.push('Thank you — this confirms we received your payment.');
+  lines.push('');
+  lines.push(owner || company);
+  if(owner && company) lines.push(company);
+
+  const subject = encodeURIComponent(`Payment Receipt — ${invoiceNum} — $${Number(payment.amount).toLocaleString()}`);
+  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
+  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
 }
 
 /* ---- PRICE BOOK modal ---- */
