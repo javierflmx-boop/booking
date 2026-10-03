@@ -219,6 +219,7 @@
   .ticket.status-paused .stripe{background:#8a8f98;}
   .ticket.status-completed .stripe, .ticket.status-approved .stripe, .ticket.status-paid .stripe{background:var(--green);}
   .ticket.status-invoiced .stripe, .ticket.status-declined .stripe, .ticket.status-overdue .stripe{background:var(--red);}
+  .ticket.status-void .stripe{background:#8a8f98;}
   .ticket .punch-hole{
     position:absolute;left:-7px;top:50%;transform:translateY(-50%);
     width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);
@@ -237,6 +238,7 @@
   .status-tag.paused{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;}
   .status-tag.completed, .status-tag.approved, .status-tag.paid{background:rgba(62,137,20,0.1);color:var(--green);border-color:var(--green);}
   .status-tag.invoiced, .status-tag.declined, .status-tag.overdue{background:rgba(193,68,14,0.1);color:var(--red);border-color:var(--red);}
+  .status-tag.void{background:rgba(138,143,152,0.12);color:#5a5f68;border-color:#8a8f98;}
 
   .empty-state{ text-align:center;padding:40px 20px;color:rgba(28,30,34,0.4); }
   .empty-state .glyph{font-size:32px;margin-bottom:8px;}
@@ -799,11 +801,13 @@ function partnerHTML(p){
 /* ---------- PULSE ---------- */
 const PULSE_COLORS = {
   scheduled:'var(--blue)', in_progress:'var(--orange)', paused:'#8a8f98', completed:'var(--green)', invoiced:'#8a8f98', cancelled:'var(--red)',
-  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)'
+  draft:'var(--blue)', sent:'var(--orange)', approved:'var(--green)', declined:'var(--red)', paid:'var(--green)', overdue:'var(--red)',
+  partial:'var(--charcoal)', void:'#8a8f98'
 };
-function renderPulse(elId, list, statuses, title){
+function renderPulse(elId, list, statuses, title, classifier){
   const total = list.length;
-  const counts = statuses.map(s => ({ s, n: list.filter(x=>x.status===s).length }));
+  const getStatus = classifier || (x=>x.status);
+  const counts = statuses.map(s => ({ s, n: list.filter(x=>getStatus(x)===s).length }));
   const segs = counts.filter(c=>c.n>0).map(c=>
     `<div class="seg" style="width:${(c.n/total*100)||0}%;background:${PULSE_COLORS[c.s]};"></div>`
   ).join('');
@@ -822,7 +826,7 @@ function renderOwner(){
   document.getElementById('ownerCoName').innerHTML = (db.settings.companyName||'MY COMPANY').toUpperCase() + '<span class="dot">.</span>';
   renderPulse('pulseJobs', db.jobs, ['scheduled','in_progress','paused','completed','invoiced','cancelled'], 'Jobs');
   renderPulse('pulseEstimates', db.estimates, ['draft','sent','approved','declined'], 'Estimates');
-  renderPulse('pulseInvoices', db.invoices, ['draft','sent','paid','overdue'], 'Invoices');
+  renderPulse('pulseInvoices', db.invoices, ['draft','sent','partial','paid','overdue','void'], 'Invoices', invoiceDisplayStatus);
 
   document.getElementById('todayList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(0)).map(ticketHTML).join('') || `<div class="empty-state"><p>No jobs today. Tap + to create one.</p></div>`;
   document.getElementById('upcomingList').innerHTML = db.jobs.filter(j=>j.date===todayPlus(1)).map(ticketHTML).join('') || `<div class="empty-state"><p>Nothing scheduled yet.</p></div>`;
@@ -1012,11 +1016,25 @@ const BREAKDOWN_CONFIG = {
   invoices: { title:'Invoices Breakdown', baseColor:'#233D4D', statuses:[
     {key:'draft', label:'Draft', sub:'Not sent yet', h:'bd-h1'},
     {key:'sent', label:'Sent', sub:'Awaiting payment', h:'bd-h2'},
-    {key:'paid', label:'Paid', sub:'Money in', h:'bd-h3'},
+    {key:'partial', label:'Partial', sub:'Some paid, balance left', h:'bd-h3'},
+    {key:'paid', label:'Paid', sub:'Money in', h:'bd-h2'},
     {key:'overdue', label:'Overdue', sub:'Follow up', h:'bd-h4'},
+    {key:'void', label:'Void', sub:'Cancelled', h:'bd-h4'},
   ]},
 };
 function getListForType(type){ return type==='jobs' ? db.jobs : type==='estimates' ? db.estimates : db.invoices; }
+// For invoices, the breakdown bucket is computed from payment progress, not
+// just the raw status field — so a "sent" invoice with a deposit paid shows
+// as Partial instead of hiding that progress.
+function invoiceDisplayStatus(inv){
+  if(inv.status==='void') return 'void';
+  const paid = invoicePaidTotal(inv);
+  const balance = invoiceBalance(inv);
+  if(balance<=0 && itemsTotal(inv.items)>0) return 'paid';
+  if(inv.status==='overdue') return 'overdue';
+  if(paid>0 && balance>0) return 'partial';
+  return inv.status==='draft' ? 'draft' : 'sent';
+}
 function openBreakdown(type){ renderBreakdownPage(type); showOwnerTab('breakdown'); }
 function shadeStyle(baseHex, ratio){
   const whitePct = Math.max(8, Math.round(92 - ratio*84));
@@ -1030,7 +1048,7 @@ function renderBreakdownPage(type){
   const total = list.length;
   document.getElementById('breakdownTitle').textContent = cfg.title + ' — ' + total + ' total';
   document.getElementById('breakdownGrid').innerHTML = cfg.statuses.map(s=>{
-    const n = list.filter(x=>x.status===s.key).length;
+    const n = type==='invoices' ? list.filter(x=>invoiceDisplayStatus(x)===s.key).length : list.filter(x=>x.status===s.key).length;
     const ratio = total ? n/total : 0;
     const {bg, fg} = shadeStyle(cfg.baseColor, ratio);
     return `<div class="breakdown-card ${s.h}" style="background:${bg};color:${fg};">
@@ -1501,7 +1519,7 @@ function openInvoiceModal(id){
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_istatus">
-          ${['draft','sent','paid','overdue'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
+          ${['draft','sent','paid','overdue','void'].map(s=>`<option value="${s}" ${s===inv.status?'selected':''}>${statusLabel(s)}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Due date</label><input id="f_due" type="date" value="${inv.due||''}"/></div>
@@ -1618,6 +1636,20 @@ function convertEstimateToInvoice(estimateId){
   renderOwner();
   openInvoiceModal(newInv.id);
 }
+function showEmailPreview(built, onConfirm){
+  window._emailPreviewConfirm = onConfirm;
+  document.getElementById('pickerRoot').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closePicker()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><h2>Preview</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">To: ${built.to} · Subject: ${built.subject}</p>
+        <div style="background:#fff;border:2px solid var(--ink);border-radius:10px;padding:16px;margin-bottom:16px;max-height:45vh;overflow-y:auto;white-space:pre-wrap;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;color:var(--ink);">${built.text.replace(/</g,'&lt;')}</div>
+        <button class="btn btn-primary" onclick="window._emailPreviewConfirm()">Send Email Now</button>
+        <button class="btn btn-secondary" style="margin-top:10px;" onclick="closePicker()">Edit First</button>
+      </div>
+    </div>`;
+}
 function businessFooterLines(){
   const lines = [];
   if(db.settings.address) lines.push(db.settings.address);
@@ -1628,13 +1660,10 @@ function businessFooterLines(){
   }
   return lines;
 }
-function sendInvoiceEmail(id){
+function buildInvoiceEmail(id){
   const inv = db.invoices.find(i=>i.id===id);
   const cust = db.customers.find(c=>c.id===inv.customerId);
-  if(!cust || !cust.email){
-    alert('This customer has no email on file yet. Add one in Customers, then try again.');
-    return;
-  }
+  if(!cust || !cust.email) return null;
   const total = itemsTotal(inv.items);
   const company = db.settings.companyName || 'Our Company';
   const owner = db.settings.ownerName || '';
@@ -1642,8 +1671,6 @@ function sendInvoiceEmail(id){
   const todayStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
   const dueStr = inv.due ? new Date(inv.due+'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : null;
   const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
-
-  const NL = '%0D%0A';
   const rule = '--------------------------------------------------';
   let lines = [];
   lines.push(`INVOICE ${invoiceNum}`);
@@ -1676,20 +1703,30 @@ function sendInvoiceEmail(id){
   if(owner && company) lines.push(company);
   const footer1 = businessFooterLines();
   if(footer1.length){ lines.push(''); lines.push(...footer1); }
-
-  const subject = encodeURIComponent(`${invoiceNum} from ${company}`);
-  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
-  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
-  if(inv.status==='draft'){ inv.status='sent'; saveData(); renderOwner(); }
+  return { to: cust.email, subject: `${invoiceNum} from ${company}`, text: lines.join('\n') };
 }
-
-function sendReceiptEmail(invId, paymentIdx){
-  const inv = db.invoices.find(i=>i.id===invId);
-  const cust = db.customers.find(c=>c.id===inv.customerId);
-  if(!cust || !cust.email){
+function sendInvoiceEmail(id){
+  const built = buildInvoiceEmail(id);
+  if(!built){
     alert('This customer has no email on file yet. Add one in Customers, then try again.');
     return;
   }
+  showEmailPreview(built, () => confirmSendInvoiceEmail(id, built));
+}
+function confirmSendInvoiceEmail(id, built){
+  const NL = '%0D%0A';
+  const subject = encodeURIComponent(built.subject);
+  const body = encodeURIComponent(built.text).replace(/%0A/g, NL);
+  window.location.href = `mailto:${built.to}?subject=${subject}&body=${body}`;
+  closePicker();
+  const inv = db.invoices.find(i=>i.id===id);
+  if(inv.status==='draft'){ inv.status='sent'; saveData(); renderOwner(); }
+}
+
+function buildReceiptEmail(invId, paymentIdx){
+  const inv = db.invoices.find(i=>i.id===invId);
+  const cust = db.customers.find(c=>c.id===inv.customerId);
+  if(!cust || !cust.email) return null;
   const payment = inv.payments[paymentIdx];
   const company = db.settings.companyName || 'Our Company';
   const owner = db.settings.ownerName || '';
@@ -1699,8 +1736,6 @@ function sendReceiptEmail(invId, paymentIdx){
   const paidToDate = invoicePaidTotal(inv);
   const balance = jobTotal - paidToDate;
   const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
-
-  const NL = '%0D%0A';
   const rule = '--------------------------------------------------';
   let lines = [];
   lines.push(`PAYMENT RECEIPT`);
@@ -1726,10 +1761,22 @@ function sendReceiptEmail(invId, paymentIdx){
   if(owner && company) lines.push(company);
   const footer2 = businessFooterLines();
   if(footer2.length){ lines.push(''); lines.push(...footer2); }
-
-  const subject = encodeURIComponent(`Payment Receipt — ${invoiceNum} — $${Number(payment.amount).toLocaleString()}`);
-  const body = encodeURIComponent(lines.join('\n')).replace(/%0A/g, NL);
-  window.location.href = `mailto:${cust.email}?subject=${subject}&body=${body}`;
+  return { to: cust.email, subject: `Payment Receipt — ${invoiceNum} — $${Number(payment.amount).toLocaleString()}`, text: lines.join('\n') };
+}
+function sendReceiptEmail(invId, paymentIdx){
+  const built = buildReceiptEmail(invId, paymentIdx);
+  if(!built){
+    alert('This customer has no email on file yet. Add one in Customers, then try again.');
+    return;
+  }
+  showEmailPreview(built, () => confirmSendReceiptEmail(built));
+}
+function confirmSendReceiptEmail(built){
+  const NL = '%0D%0A';
+  const subject = encodeURIComponent(built.subject);
+  const body = encodeURIComponent(built.text).replace(/%0A/g, NL);
+  window.location.href = `mailto:${built.to}?subject=${subject}&body=${body}`;
+  closePicker();
 }
 
 /* ---- PRICE BOOK modal ---- */
