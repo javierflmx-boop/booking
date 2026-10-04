@@ -1042,7 +1042,9 @@ function shadeStyle(baseHex, ratio){
   const fg = whitePct > 48 ? '#1C1E22' : '#ffffff';
   return { bg, fg };
 }
+let currentBreakdownType = null;
 function renderBreakdownPage(type){
+  currentBreakdownType = type;
   const cfg = BREAKDOWN_CONFIG[type];
   const list = getListForType(type);
   const total = list.length;
@@ -1051,11 +1053,35 @@ function renderBreakdownPage(type){
     const n = type==='invoices' ? list.filter(x=>invoiceDisplayStatus(x)===s.key).length : list.filter(x=>x.status===s.key).length;
     const ratio = total ? n/total : 0;
     const {bg, fg} = shadeStyle(cfg.baseColor, ratio);
-    return `<div class="breakdown-card ${s.h}" style="background:${bg};color:${fg};">
+    return `<div class="breakdown-card ${s.h}" style="background:${bg};color:${fg};cursor:pointer;" onclick="openBreakdownFilterList('${type}','${s.key}','${s.label}')">
       <div><h4>${s.label}</h4><div class="bd-sub">${s.sub}</div></div>
       <div class="bd-pct">${n}</div>
     </div>`;
   }).join('');
+}
+function openBreakdownFilterList(type, statusKey, label){
+  const list = getListForType(type);
+  const matches = type==='invoices'
+    ? list.filter(x=>invoiceDisplayStatus(x)===statusKey)
+    : list.filter(x=>x.status===statusKey);
+  let rowsHTML;
+  if(matches.length===0){
+    rowsHTML = `<p style="font-size:13px;color:rgba(28,30,34,0.5);text-align:center;padding:20px 0;">Nothing in this category yet.</p>`;
+  } else if(type==='jobs'){
+    rowsHTML = matches.map(j=>`<div onclick="closePicker();openJobModal(${j.id})">${ticketHTML(j)}</div>`).join('');
+  } else if(type==='estimates'){
+    rowsHTML = matches.map(e=>`<div onclick="closePicker();openEstimateModal(${e.id})">${moneyHTML(e,'estimate')}</div>`).join('');
+  } else {
+    rowsHTML = matches.map(i=>`<div onclick="closePicker();openInvoiceModal(${i.id})">${moneyHTML(i,'invoice')}</div>`).join('');
+  }
+  document.getElementById('pickerRoot').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closePicker()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><h2>${label} (${matches.length})</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        ${rowsHTML}
+      </div>
+    </div>`;
 }
 
 function renderAgenda(){
@@ -1542,6 +1568,7 @@ function openInvoiceModal(id){
     </div>
     `:''}
     <button class="btn btn-primary" onclick="saveInvoice(${id||'null'})">Save Invoice</button>
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="openScopeEditor(${id})">Edit Scope of Work</button>`:''}
     ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="viewInvoiceDocument(${id})">View / Print Invoice</button>`:''}
     ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="sendInvoiceEmail(${id})">Send Invoice to Customer</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteInvoice('+id+')">Delete Invoice</button>':''}
@@ -1717,7 +1744,10 @@ function generateInvoiceDocHTML(id){
     .print-btn{background:var(--orange);color:#fff;border:2px solid var(--ink);padding:10px 18px;font-weight:700;border-radius:8px;cursor:pointer;font-size:14px;font-family:'Inter',sans-serif;}
     @media print{ .print-bar{display:none;} body{background:#fff;} .sheet{box-shadow:none;margin:0;border:none;} }
   </style></head><body>
-  <div class="print-bar"><button class="print-btn" onclick="window.print()">Print / Save as PDF</button></div>
+  <div class="print-bar">
+    <button class="print-btn" style="background:#233D4D;margin-right:8px;" onclick="if(window.opener){window.opener.openInvoiceModal(${id});window.opener.focus();} window.close();">← Back to Edit</button>
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
   <div class="sheet">
     <div class="header">
       <div class="brand">
@@ -1758,6 +1788,60 @@ function generateInvoiceDocHTML(id){
     </div>
   </div>
   </body></html>`;
+}
+function scopeCategoriesToText(cats){
+  return (cats||[]).map(c => c.category + '\n' + (c.items||[]).map(i=>'- '+i).join('\n')).join('\n\n');
+}
+function parseScopeText(text){
+  const lines = text.split('\n');
+  const categories = [];
+  let current = null;
+  lines.forEach(line=>{
+    const t = line.trim();
+    if(!t) return;
+    if(t.startsWith('-')){
+      if(!current){ current = {category:'General', items:[]}; categories.push(current); }
+      current.items.push(t.replace(/^-+\s*/,''));
+    } else {
+      current = {category:t, items:[]};
+      categories.push(current);
+    }
+  });
+  return categories;
+}
+function openScopeEditor(invId){
+  const inv = db.invoices.find(i=>i.id===invId);
+  const scopeText = scopeCategoriesToText(inv.scopeCategories);
+  const sc = inv.scopeChange || {original:'', revised:''};
+  document.getElementById('pickerRoot').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closePicker()">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><h2>Scope of Work</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">Type a category name on its own line, then each item below it starting with a dash. Leave a blank line between categories.</p>
+        <div class="field"><textarea id="f_scopeText" style="min-height:260px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;" placeholder="DEMOLITION
+- Remove existing carpet throughout
+- Demo walls to create the bowl sink room
+
+PAINTING
+- Paint entire place, smooth walls
+- Paint all ceiling panels, approx. 2,500 sf">${scopeText}</textarea></div>
+        <label style="display:block;font-size:12px;color:rgba(28,30,34,0.55);margin:14px 0 6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;">Scope Change (optional)</label>
+        <div class="field"><label>Original</label><input id="f_scopeOrig" value="${(sc.original||'').replace(/"/g,'&quot;')}" placeholder="What was originally agreed"/></div>
+        <div class="field"><label>Revised</label><input id="f_scopeRev" value="${(sc.revised||'').replace(/"/g,'&quot;')}" placeholder="What changed, agreed by both parties"/></div>
+        <button class="btn btn-primary" onclick="saveScopeEditor(${invId})">Save Scope of Work</button>
+      </div>
+    </div>`;
+}
+function saveScopeEditor(invId){
+  const inv = db.invoices.find(i=>i.id===invId);
+  const text = document.getElementById('f_scopeText').value;
+  inv.scopeCategories = parseScopeText(text);
+  const orig = document.getElementById('f_scopeOrig').value.trim();
+  const rev = document.getElementById('f_scopeRev').value.trim();
+  inv.scopeChange = orig ? {original:orig, revised:rev} : null;
+  saveData();
+  closePicker();
 }
 function viewInvoiceDocument(id){
   const html = generateInvoiceDocHTML(id);
