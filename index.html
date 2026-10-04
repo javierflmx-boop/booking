@@ -1314,6 +1314,7 @@ function openAddMenu(){
           <div class="action-row" onclick="closeModal();openCustomerModal()">Customer</div>
           <div class="action-row" onclick="closeModal();openPriceItemModal()">Price Item</div>
           <div class="action-row" onclick="closeModal();openPartnerModal()">Partner</div>
+          <div class="action-row" style="color:var(--orange);" onclick="closeModal();pasteFromClipboardToJob()">📋 Paste from Claude</div>
         </div>
         <div class="action-cancel" onclick="closeModal()">Cancel</div>
       </div>
@@ -1809,6 +1810,39 @@ function parseScopeText(text){
   });
   return categories;
 }
+async function pasteFromClipboardToJob(){
+  let text = '';
+  try{
+    text = await navigator.clipboard.readText();
+  }catch(e){
+    alert("Couldn't read your clipboard — make sure you copied something first, then try again.");
+    return;
+  }
+  if(!text || !text.trim()){
+    alert('Nothing found on your clipboard. Copy some text first, then tap this again.');
+    return;
+  }
+  openJobModal();
+  setTimeout(()=>{
+    const notesEl = document.getElementById('f_notes');
+    if(notesEl) notesEl.value = text.trim();
+  }, 50);
+}
+async function pasteIntoScopeEditor(){
+  let text = '';
+  try{
+    text = await navigator.clipboard.readText();
+  }catch(e){
+    alert("Couldn't read your clipboard — make sure you copied something first, then try again.");
+    return;
+  }
+  if(!text || !text.trim()){
+    alert('Nothing found on your clipboard. Copy some text first, then tap this again.');
+    return;
+  }
+  const el = document.getElementById('f_scopeText');
+  if(el) el.value = text.trim();
+}
 function openScopeEditor(invId){
   const inv = db.invoices.find(i=>i.id===invId);
   const scopeText = scopeCategoriesToText(inv.scopeCategories);
@@ -1818,7 +1852,8 @@ function openScopeEditor(invId){
       <div class="sheet">
         <div class="sheet-handle"></div>
         <div class="sheet-head"><h2>Scope of Work</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
-        <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">Type a category name on its own line, then each item below it starting with a dash. Leave a blank line between categories.</p>
+        <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 10px;">Type a category name on its own line, then each item below it starting with a dash. Leave a blank line between categories.</p>
+        <button class="btn btn-secondary" style="margin-bottom:12px;" onclick="pasteIntoScopeEditor()">📋 Paste from Claude</button>
         <div class="field"><textarea id="f_scopeText" style="min-height:260px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;" placeholder="DEMOLITION
 - Remove existing carpet throughout
 - Demo walls to create the bowl sink room
