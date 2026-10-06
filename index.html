@@ -679,7 +679,7 @@ function ticketHTML(job){
         <span>🕐 ${formatWhen(job.date, job.time)}</span>
         <span>📍 ${job.address||'—'}</span>
         ${helperName(job.helperId)?`<span>👤 ${helperName(job.helperId)}</span>`:''}
-        ${job.items && job.items.length ? `<span class="mono">$${itemsTotal(job.items).toLocaleString()}</span>` : ''}
+        ${(()=>{ const li = linkedInvoiceFor(job.id); const t = li ? itemsTotal(li.items) : itemsTotal(job.items||[]); return t ? `<span class="mono">$${t.toLocaleString()}</span>` : ''; })()}
       </div>
     </div>
   </div>`;
@@ -851,7 +851,7 @@ function renderOwner(){
   document.getElementById('partnersCount').textContent = db.partners.length;
 
   document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
-  const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
+  const openTotal = db.invoices.filter(i=>i.status!=='paid' && i.status!=='void').reduce((s,i)=>s+Math.max(0, invoiceBalance(i)),0);
   const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
   document.getElementById('ccJobsSub').textContent = openJobsCount + ' open';
   document.getElementById('ccMoneySub').textContent = '$'+openTotal.toLocaleString()+' open invoices · '+db.estimates.filter(e=>e.status==='sent').length+' estimates pending';
@@ -1324,6 +1324,7 @@ function openAddMenu(){
 
 /* ---- JOB modal ---- */
 function openJobModal(id, presetDate){
+  if(id){ const li = linkedInvoiceFor(id); if(li){ openInvoiceModal(li.id); return; } }
   const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',time:'',date:presetDate||todayPlus(0),address:'',notes:'',items:[]};
   lineItemsDraft = JSON.parse(JSON.stringify(job.items||[]));
   openModal(`
@@ -1350,7 +1351,7 @@ function openJobModal(id, presetDate){
     </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
-    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertJobToInvoice(${id})">Create Invoice from this Job</button>`:''}
+    ${id ? (linkedInvoiceFor(id) ? `<button class="btn btn-secondary" style="margin-top:10px;" onclick="openLinkedInvoice(${id})">Open Invoice</button>` : `<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertJobToInvoice(${id})">Create Invoice from this Job</button>`) : ''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteJob('+id+')">Delete Job</button>':''}
   `);
   renderLineItems();
@@ -1535,7 +1536,7 @@ function openInvoiceModal(id){
   const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}],payments:[]};
   inv.payments = inv.payments || [];
   lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
-  const sourceNote = inv.jobId ? `Created from job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
+  const sourceNote = inv.jobId ? `Job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
     : inv.estimateId ? `Created from an estimate` : '';
   const jobTotal = itemsTotal(inv.items);
   const paid = invoicePaidTotal(inv);
@@ -1544,6 +1545,7 @@ function openInvoiceModal(id){
     <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     ${sourceNote?`<p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">${sourceNote}</p>`:''}
     <div class="field"><label>Customer</label><select id="f_icustomer">${customerOptions(inv.customerId)}</select></div>
+    ${jobSectionHTML(inv, id)}
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_istatus">
@@ -1634,11 +1636,98 @@ function saveInvoice(id){
     due: document.getElementById('f_due').value,
     items: lineItemsDraft.filter(i=>i.name.trim()!==''),
   };
+  const jobSel = document.getElementById('f_ijob');
+  if(jobSel) data.jobId = jobSel.value ? Number(jobSel.value) : null;
+  const jt = document.getElementById('f_jtitle');
+  if(jt && id){
+    const cur = db.invoices.find(i=>i.id===id);
+    const linked = cur && db.jobs.find(j=>j.id===cur.jobId);
+    if(linked){
+      linked.title = jt.value.trim() || linked.title;
+      linked.customerId = data.customerId;
+      linked.helperId = document.getElementById('f_jhelper').value ? Number(document.getElementById('f_jhelper').value) : null;
+      linked.status = document.getElementById('f_jstatus').value;
+      linked.date = document.getElementById('f_jdate').value || linked.date;
+      linked.time = document.getElementById('f_jtime').value.trim();
+      linked.address = document.getElementById('f_jaddress').value.trim();
+      linked.notes = document.getElementById('f_jnotes').value.trim();
+    }
+  }
   if(id){ Object.assign(db.invoices.find(i=>i.id===id), data); }
   else { db.invoices.push({id:newId(), ...data, payments:[]}); }
   saveData(); closeModal(); renderOwner();
 }
 function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
+
+/* ---- LINK AN INVOICE TO A JOB ---- */
+function jobOptionsForInvoice(inv){
+  const sorted = [...db.jobs].sort((a,b)=> (a.customerId===inv.customerId?0:1) - (b.customerId===inv.customerId?0:1));
+  return '<option value="">No job linked</option>' + sorted.map(j=>`<option value="${j.id}" ${j.id===inv.jobId?'selected':''}>${esc(j.title)} — ${esc(customerName(j.customerId))}</option>`).join('');
+}
+function linkedInvoiceFor(jobId){ return db.invoices.find(i=>i.jobId===jobId) || null; }
+function openLinkedInvoice(jobId){ const inv = linkedInvoiceFor(jobId); if(inv){ closeModal(); openInvoiceModal(inv.id); } }
+function openLinkedJob(invId){
+  const inv = db.invoices.find(i=>i.id===invId);
+  if(inv && inv.jobId && db.jobs.find(j=>j.id===inv.jobId)){ closeModal(); openJobModal(inv.jobId); }
+}
+function makeJobForInvoice(inv){
+  const cust = db.customers.find(c=>c.id===inv.customerId);
+  const job = {
+    id: newId(),
+    title: (inv.project && inv.project.name) ? inv.project.name : ((inv.items && inv.items[0] && inv.items[0].name) ? inv.items[0].name : 'Job'),
+    customerId: inv.customerId,
+    status: 'in_progress',
+    time: '',
+    date: todayPlus(0),
+    address: cust ? (cust.address || '') : '',
+    notes: '',
+    items: [],
+  };
+  db.jobs.push(job);
+  inv.jobId = job.id;
+  return job;
+}
+function createJobFromInvoice(invId){
+  const inv = db.invoices.find(i=>i.id===invId);
+  if(!inv) return;
+  makeJobForInvoice(inv);
+  saveData(); closeModal(); renderOwner();
+  openInvoiceModal(inv.id);
+}
+function unlinkJobFromInvoice(invId){
+  const inv = db.invoices.find(i=>i.id===invId);
+  if(!inv) return;
+  inv.jobId = null;
+  saveData(); closeModal(); renderOwner();
+  openInvoiceModal(inv.id);
+}
+function jobSectionHTML(inv, id){
+  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
+  const lbl = "display:block;font-size:12px;color:rgba(28,30,34,0.55);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;";
+  if(job){
+    return `
+    <div style="border:2px solid var(--ink);border-radius:12px;padding:14px;margin:4px 0 16px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="${lbl}">Job details</span>
+        <button style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;" onclick="unlinkJobFromInvoice(${id})">Unlink job</button>
+      </div>
+      <div class="field"><label>Job title</label><input id="f_jtitle" value="${esc(job.title)}"/></div>
+      <div class="field"><label>Assigned to</label><select id="f_jhelper">${helperOptions(job.helperId)}</select></div>
+      <div class="field-row">
+        <div class="field"><label>Job status</label><select id="f_jstatus">${['scheduled','in_progress','paused','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
+        <div class="field"><label>Date</label><input id="f_jdate" type="date" value="${job.date||todayPlus(0)}"/></div>
+      </div>
+      <div class="field"><label>Time (optional)</label><input id="f_jtime" value="${esc(job.time||'')}" placeholder="9:00 AM"/></div>
+      <div class="field"><label>Address</label><input id="f_jaddress" value="${esc(job.address||'')}"/></div>
+      <div class="field" style="margin-bottom:0;"><label>Notes</label><textarea id="f_jnotes">${esc(job.notes||'')}</textarea></div>
+    </div>`;
+  }
+  if(!id) return '';
+  return `
+    <div class="field"><label>Job</label><select id="f_ijob">${jobOptionsForInvoice(inv)}</select></div>
+    <button class="btn btn-secondary" style="margin:-4px 0 14px;" onclick="createJobFromInvoice(${id})">＋ Create a Job from this Invoice</button>`;
+}
+
 
 /* ---- IMPORT A FULL INVOICE FROM CLAUDE (customer, cost, payments, scope, design notes) ---- */
 /* ---- INSTRUCTIONS THAT ANY AI (Claude, ChatGPT, etc.) CAN FOLLOW TO MAKE AN IMPORTABLE INVOICE ---- */
@@ -1762,6 +1851,7 @@ function runInvoiceImport(){
     totalNote: String(data.totalNote||''),
   };
   db.invoices.push(inv);
+  makeJobForInvoice(inv);
   saveData(); closeModal(); renderOwner();
   openInvoiceModal(inv.id);
 }
@@ -2056,6 +2146,7 @@ function viewInvoiceDocument(id){
 }
 
 function convertJobToInvoice(jobId){
+  { const ex = linkedInvoiceFor(jobId); if(ex){ closeModal(); openInvoiceModal(ex.id); return; } }
   const job = db.jobs.find(j=>j.id===jobId);
   const newInv = {
     id:newId(), customerId:job.customerId, status:'sent', due:'',
