@@ -750,7 +750,9 @@ function leadHTML(l){
 }
 function moneyHTML(item, kind){
   const total = itemsTotal(item.items);
-  const dueText = kind==='invoice' && item.due ? ' · due '+item.due : '';
+  const paidAmt = kind==='invoice' ? invoicePaidTotal(item) : 0;
+  const shownStatus = kind==='invoice' ? invoiceDisplayStatus(item) : item.status;
+  const dueText = (kind==='invoice' && paidAmt>0 ? ' · paid $'+paidAmt.toLocaleString()+' · owes $'+Math.max(0,total-paidAmt).toLocaleString() : '') + (kind==='invoice' && item.due ? ' · due '+item.due : '');
   return `
   <div class="ticket status-${item.status}" onclick="${kind==='invoice'?'openInvoiceModal':'openEstimateModal'}(${item.id})">
     <div class="stripe"></div>
@@ -761,7 +763,7 @@ function moneyHTML(item, kind){
           <div class="job-title">${customerName(item.customerId)}</div>
           <div class="customer mono">$${total.toLocaleString()}${dueText}</div>
         </div>
-        <span class="status-tag ${item.status}">${item.status}</span>
+        <span class="status-tag ${shownStatus}">${shownStatus}</span>
       </div>
     </div>
   </div>`;
@@ -851,7 +853,7 @@ function renderOwner(){
   document.getElementById('partnersCount').textContent = db.partners.length;
 
   document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
-  const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
+  const openTotal = db.invoices.filter(i=>i.status!=='paid'&&i.status!=='void').reduce((s,i)=>s+Math.max(0,invoiceBalance(i)),0);
   const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
   document.getElementById('ccJobsSub').textContent = openJobsCount + ' open';
   document.getElementById('ccMoneySub').textContent = '$'+openTotal.toLocaleString()+' open invoices · '+db.estimates.filter(e=>e.status==='sent').length+' estimates pending';
@@ -1632,6 +1634,7 @@ function savePayment(invId, idx){
   syncPaidStatus(inv);
   saveData();
   closePicker();
+  renderOwner();
   openInvoiceModal(invId);
 }
 function deletePayment(invId, idx){
@@ -1641,6 +1644,7 @@ function deletePayment(invId, idx){
   inv.payments.splice(idx,1);
   syncPaidStatus(inv);
   saveData();
+  renderOwner();
   openInvoiceModal(invId);
 }
 function syncPaidStatus(inv){
@@ -1705,6 +1709,15 @@ function generateInvoiceDocHTML(id){
   const licenseLine = (s.credentials && s.credentials.length)
     ? s.credentials.map(c=>`${c.label}: ${c.value}`).join(' &nbsp;•&nbsp; ')
     : '';
+  const fmtDate = d => { const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[2]+'/'+m[3]+'/'+m[1] : (d||''); };
+  let runBal = total;
+  const sortedPays = (inv.payments||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const historyHTML = sortedPays.length ? `
+    <div class="pay-head">Payment History</div>
+    <table class="pay-table">
+      <thead><tr><th>Date</th><th>Method</th><th class="amt">Amount</th><th class="amt">Balance After</th></tr></thead>
+      <tbody>${sortedPays.map(p=>{ runBal -= Number(p.amount)||0; return `<tr><td>${fmtDate(p.date)}</td><td>${p.method||''}${p.note?' · '+p.note:''}</td><td class="amt">$${Number(p.amount).toLocaleString()}</td><td class="amt">$${Math.max(0,runBal).toLocaleString()}</td></tr>`; }).join('')}</tbody>
+    </table>` : '';
   const paymentRows = paidToDate > 0 ? `
       <div class="totals-row"><span class="k">Paid to Date</span><span class="v">$${paidToDate.toLocaleString()}</span></div>
       <div class="totals-row"><span class="k">Balance</span><span class="v">$${balance.toLocaleString()}</span></div>` : '';
@@ -1752,6 +1765,11 @@ function generateInvoiceDocHTML(id){
     .notice{border:2px dashed var(--orange);background:#FFF6EE;padding:14px 16px;margin-bottom:24px;font-size:12.5px;}
     .notice .t{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--orange);margin-bottom:6px;}
     .notice b{color:var(--ink);}
+    .pay-head{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid var(--ink);padding-bottom:6px;margin:6px 0 0;}
+    .pay-table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px;}
+    .pay-table th{text-align:left;font-size:10.5px;letter-spacing:0.8px;text-transform:uppercase;color:var(--grey);padding:8px 6px;border-bottom:1px solid var(--line);}
+    .pay-table td{padding:8px 6px;border-bottom:1px solid var(--line);}
+    .pay-table .amt{text-align:right;font-weight:700;}
     .totals{display:flex;justify-content:flex-end;margin-bottom:30px;}
     .totals-box{width:320px;border:2px solid var(--ink);}
     .totals-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13.5px;border-bottom:1px solid var(--line);}
@@ -1795,6 +1813,7 @@ function generateInvoiceDocHTML(id){
     </table>
     ${scopeHTML}
     ${scopeChangeHTML}
+    ${historyHTML}
     <div class="totals"><div class="totals-box">
       ${paymentRows}
       <div class="totals-row grand"><span class="k">${paidToDate>0?'Balance Due':'Total'}</span><span class="v">$${(paidToDate>0?balance:total).toLocaleString()}</span></div>
