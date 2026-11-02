@@ -679,7 +679,7 @@ function ticketHTML(job){
         <span>🕐 ${formatWhen(job.date, job.time)}</span>
         <span>📍 ${job.address||'—'}</span>
         ${helperName(job.helperId)?`<span>👤 ${helperName(job.helperId)}</span>`:''}
-        ${(()=>{ const li = linkedInvoiceFor(job.id); const t = li ? itemsTotal(li.items) : itemsTotal(job.items||[]); return t ? `<span class="mono">$${t.toLocaleString()}</span>` : ''; })()}
+        ${job.items && job.items.length ? `<span class="mono">$${itemsTotal(job.items).toLocaleString()}</span>` : ''}
       </div>
     </div>
   </div>`;
@@ -851,7 +851,7 @@ function renderOwner(){
   document.getElementById('partnersCount').textContent = db.partners.length;
 
   document.getElementById('statOpenJobs') && (document.getElementById('statOpenJobs').textContent = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length);
-  const openTotal = db.invoices.filter(i=>i.status!=='paid' && i.status!=='void').reduce((s,i)=>s+Math.max(0, invoiceBalance(i)),0);
+  const openTotal = db.invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+itemsTotal(i.items),0);
   const openJobsCount = db.jobs.filter(j=>j.status!=='completed'&&j.status!=='invoiced'&&j.status!=='cancelled').length;
   document.getElementById('ccJobsSub').textContent = openJobsCount + ' open';
   document.getElementById('ccMoneySub').textContent = '$'+openTotal.toLocaleString()+' open invoices · '+db.estimates.filter(e=>e.status==='sent').length+' estimates pending';
@@ -1315,7 +1315,6 @@ function openAddMenu(){
           <div class="action-row" onclick="closeModal();openPriceItemModal()">Price Item</div>
           <div class="action-row" onclick="closeModal();openPartnerModal()">Partner</div>
           <div class="action-row" style="color:var(--orange);" onclick="closeModal();pasteFromClipboardToJob()">📋 Paste from Claude</div>
-          <div class="action-row" style="color:var(--orange);" onclick="closeModal();openInvoiceImport()">📋 Import Full Invoice from Claude</div>
         </div>
         <div class="action-cancel" onclick="closeModal()">Cancel</div>
       </div>
@@ -1324,7 +1323,6 @@ function openAddMenu(){
 
 /* ---- JOB modal ---- */
 function openJobModal(id, presetDate){
-  if(id){ const li = linkedInvoiceFor(id); if(li){ openInvoiceModal(li.id); return; } }
   const job = id ? db.jobs.find(j=>j.id===id) : {title:'',customerId:db.customers[0]?.id,status:'scheduled',time:'',date:presetDate||todayPlus(0),address:'',notes:'',items:[]};
   lineItemsDraft = JSON.parse(JSON.stringify(job.items||[]));
   openModal(`
@@ -1351,7 +1349,7 @@ function openJobModal(id, presetDate){
     </div>
     <div class="li-total">Total: <span id="liTotal">$0</span></div>
     <button class="btn btn-primary" onclick="saveJob(${id||'null'})">Save Job</button>
-    ${id ? (linkedInvoiceFor(id) ? `<button class="btn btn-secondary" style="margin-top:10px;" onclick="openLinkedInvoice(${id})">Open Invoice</button>` : `<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertJobToInvoice(${id})">Create Invoice from this Job</button>`) : ''}
+    ${id?`<button class="btn btn-secondary" style="margin-top:10px;" onclick="convertJobToInvoice(${id})">Create Invoice from this Job</button>`:''}
     ${id?'<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteJob('+id+')">Delete Job</button>':''}
   `);
   renderLineItems();
@@ -1536,7 +1534,7 @@ function openInvoiceModal(id){
   const inv = id ? db.invoices.find(i=>i.id===id) : {customerId:db.customers[0]?.id,status:'draft',due:'',items:[{name:'',qty:1,price:0}],payments:[]};
   inv.payments = inv.payments || [];
   lineItemsDraft = JSON.parse(JSON.stringify(inv.items));
-  const sourceNote = inv.jobId ? `Job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
+  const sourceNote = inv.jobId ? `Created from job: ${(db.jobs.find(j=>j.id===inv.jobId)||{}).title||'—'}`
     : inv.estimateId ? `Created from an estimate` : '';
   const jobTotal = itemsTotal(inv.items);
   const paid = invoicePaidTotal(inv);
@@ -1545,7 +1543,6 @@ function openInvoiceModal(id){
     <div class="sheet-head"><h2>${id?'Edit Invoice':'New Invoice'}</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
     ${sourceNote?`<p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);margin:-6px 0 14px;">${sourceNote}</p>`:''}
     <div class="field"><label>Customer</label><select id="f_icustomer">${customerOptions(inv.customerId)}</select></div>
-    ${jobSectionHTML(inv, id)}
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f_istatus">
@@ -1588,31 +1585,38 @@ function renderPaymentsList(inv){
         <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(28,30,34,0.5);">${p.date}${p.note?' · '+p.note:''}</div>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary" style="width:auto;padding:8px 12px;font-size:12px;" onclick="sendReceiptEmail(${inv.id},${idx})">Send Receipt</button>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 12px;font-size:12px;" onclick="openRecordPayment(${inv.id},${idx})">Edit</button>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 12px;font-size:12px;" onclick="sendReceiptEmail(${inv.id},${idx})">Receipt</button>
+        <button class="btn btn-danger" style="width:auto;padding:8px 12px;font-size:12px;margin:0;" onclick="deletePayment(${inv.id},${idx})">Delete</button>
       </div>
     </div>`).join('');
 }
-function openRecordPayment(invId){
+function openRecordPayment(invId, idx){
+  const inv = db.invoices.find(i=>i.id===invId);
+  const editing = idx!==undefined && idx!==null && inv && inv.payments && inv.payments[idx];
+  const p = editing ? inv.payments[idx] : {amount:'', date:todayPlus(0), method:'Cash', note:''};
+  const methods = ['Cash','Check','Zelle','Venmo','Card','Bank Transfer','Other'];
+  const esc = v => String(v||'').replace(/"/g,'&quot;');
   document.getElementById('pickerRoot').innerHTML = `
     <div class="overlay" onclick="if(event.target===this)closePicker()">
       <div class="sheet">
         <div class="sheet-handle"></div>
-        <div class="sheet-head"><h2>Record Payment</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
-        <div class="field"><label>Amount</label><input id="f_pay_amount" type="number" placeholder="500"/></div>
+        <div class="sheet-head"><h2>${editing?'Edit Payment':'Record Payment'}</h2><button class="sheet-close" onclick="closePicker()">✕</button></div>
+        <div class="field"><label>Amount</label><input id="f_pay_amount" type="number" placeholder="500" value="${p.amount}"/></div>
         <div class="field-row">
-          <div class="field"><label>Date</label><input id="f_pay_date" type="date" value="${todayPlus(0)}"/></div>
+          <div class="field"><label>Date</label><input id="f_pay_date" type="date" value="${p.date}"/></div>
           <div class="field"><label>Method</label>
             <select id="f_pay_method">
-              ${['Cash','Check','Zelle','Venmo','Card','Bank Transfer','Other'].map(m=>`<option value="${m}">${m}</option>`).join('')}
+              ${methods.map(m=>`<option value="${m}" ${m===p.method?'selected':''}>${m}</option>`).join('')}
             </select>
           </div>
         </div>
-        <div class="field"><label>Note (optional)</label><input id="f_pay_note" placeholder="Deposit, final payment..."/></div>
-        <button class="btn btn-primary" onclick="savePayment(${invId})">Save Payment</button>
+        <div class="field"><label>Note (optional)</label><input id="f_pay_note" placeholder="Deposit, final payment..." value="${esc(p.note)}"/></div>
+        <button class="btn btn-primary" onclick="savePayment(${invId},${editing?idx:'null'})">${editing?'Save Changes':'Save Payment'}</button>
       </div>
     </div>`;
 }
-function savePayment(invId){
+function savePayment(invId, idx){
   const amount = Number(document.getElementById('f_pay_amount').value);
   if(!amount || amount<=0){ return; }
   const payment = {
@@ -1623,11 +1627,25 @@ function savePayment(invId){
   };
   const inv = db.invoices.find(i=>i.id===invId);
   inv.payments = inv.payments || [];
-  inv.payments.push(payment);
-  if(invoiceBalance(inv) <= 0){ inv.status = 'paid'; }
+  if(idx!==undefined && idx!==null && inv.payments[idx]){ inv.payments[idx] = payment; }
+  else { inv.payments.push(payment); }
+  syncPaidStatus(inv);
   saveData();
   closePicker();
   openInvoiceModal(invId);
+}
+function deletePayment(invId, idx){
+  if(!confirm('Delete this payment?')) return;
+  const inv = db.invoices.find(i=>i.id===invId);
+  if(!inv || !inv.payments) return;
+  inv.payments.splice(idx,1);
+  syncPaidStatus(inv);
+  saveData();
+  openInvoiceModal(invId);
+}
+function syncPaidStatus(inv){
+  if(invoiceBalance(inv) <= 0 && (inv.payments||[]).length){ inv.status = 'paid'; }
+  else if(inv.status === 'paid'){ inv.status = 'sent'; }
 }
 function saveInvoice(id){
   const data = {
@@ -1636,228 +1654,12 @@ function saveInvoice(id){
     due: document.getElementById('f_due').value,
     items: lineItemsDraft.filter(i=>i.name.trim()!==''),
   };
-  const jobSel = document.getElementById('f_ijob');
-  if(jobSel) data.jobId = jobSel.value ? Number(jobSel.value) : null;
-  const jt = document.getElementById('f_jtitle');
-  if(jt && id){
-    const cur = db.invoices.find(i=>i.id===id);
-    const linked = cur && db.jobs.find(j=>j.id===cur.jobId);
-    if(linked){
-      linked.title = jt.value.trim() || linked.title;
-      linked.customerId = data.customerId;
-      linked.helperId = document.getElementById('f_jhelper').value ? Number(document.getElementById('f_jhelper').value) : null;
-      linked.status = document.getElementById('f_jstatus').value;
-      linked.date = document.getElementById('f_jdate').value || linked.date;
-      linked.time = document.getElementById('f_jtime').value.trim();
-      linked.address = document.getElementById('f_jaddress').value.trim();
-      linked.notes = document.getElementById('f_jnotes').value.trim();
-    }
-  }
   if(id){ Object.assign(db.invoices.find(i=>i.id===id), data); }
   else { db.invoices.push({id:newId(), ...data, payments:[]}); }
   saveData(); closeModal(); renderOwner();
 }
 function deleteInvoice(id){ db.invoices = db.invoices.filter(i=>i.id!==id); saveData(); closeModal(); renderOwner(); }
 
-/* ---- LINK AN INVOICE TO A JOB ---- */
-function jobOptionsForInvoice(inv){
-  const sorted = [...db.jobs].sort((a,b)=> (a.customerId===inv.customerId?0:1) - (b.customerId===inv.customerId?0:1));
-  return '<option value="">No job linked</option>' + sorted.map(j=>`<option value="${j.id}" ${j.id===inv.jobId?'selected':''}>${esc(j.title)} — ${esc(customerName(j.customerId))}</option>`).join('');
-}
-function linkedInvoiceFor(jobId){ return db.invoices.find(i=>i.jobId===jobId) || null; }
-function openLinkedInvoice(jobId){ const inv = linkedInvoiceFor(jobId); if(inv){ closeModal(); openInvoiceModal(inv.id); } }
-function openLinkedJob(invId){
-  const inv = db.invoices.find(i=>i.id===invId);
-  if(inv && inv.jobId && db.jobs.find(j=>j.id===inv.jobId)){ closeModal(); openJobModal(inv.jobId); }
-}
-function makeJobForInvoice(inv){
-  const cust = db.customers.find(c=>c.id===inv.customerId);
-  const job = {
-    id: newId(),
-    title: (inv.project && inv.project.name) ? inv.project.name : ((inv.items && inv.items[0] && inv.items[0].name) ? inv.items[0].name : 'Job'),
-    customerId: inv.customerId,
-    status: 'in_progress',
-    time: '',
-    date: todayPlus(0),
-    address: cust ? (cust.address || '') : '',
-    notes: '',
-    items: [],
-  };
-  db.jobs.push(job);
-  inv.jobId = job.id;
-  return job;
-}
-function createJobFromInvoice(invId){
-  const inv = db.invoices.find(i=>i.id===invId);
-  if(!inv) return;
-  makeJobForInvoice(inv);
-  saveData(); closeModal(); renderOwner();
-  openInvoiceModal(inv.id);
-}
-function unlinkJobFromInvoice(invId){
-  const inv = db.invoices.find(i=>i.id===invId);
-  if(!inv) return;
-  inv.jobId = null;
-  saveData(); closeModal(); renderOwner();
-  openInvoiceModal(inv.id);
-}
-function jobSectionHTML(inv, id){
-  const job = inv.jobId ? db.jobs.find(j=>j.id===inv.jobId) : null;
-  const lbl = "display:block;font-size:12px;color:rgba(28,30,34,0.55);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;";
-  if(job){
-    return `
-    <div style="border:2px solid var(--ink);border-radius:12px;padding:14px;margin:4px 0 16px;background:#fff;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <span style="${lbl}">Job details</span>
-        <button style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;" onclick="unlinkJobFromInvoice(${id})">Unlink job</button>
-      </div>
-      <div class="field"><label>Job title</label><input id="f_jtitle" value="${esc(job.title)}"/></div>
-      <div class="field"><label>Assigned to</label><select id="f_jhelper">${helperOptions(job.helperId)}</select></div>
-      <div class="field-row">
-        <div class="field"><label>Job status</label><select id="f_jstatus">${['scheduled','in_progress','paused','completed','invoiced','cancelled'].map(s=>`<option value="${s}" ${s===job.status?'selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
-        <div class="field"><label>Date</label><input id="f_jdate" type="date" value="${job.date||todayPlus(0)}"/></div>
-      </div>
-      <div class="field"><label>Time (optional)</label><input id="f_jtime" value="${esc(job.time||'')}" placeholder="9:00 AM"/></div>
-      <div class="field"><label>Address</label><input id="f_jaddress" value="${esc(job.address||'')}"/></div>
-      <div class="field" style="margin-bottom:0;"><label>Notes</label><textarea id="f_jnotes">${esc(job.notes||'')}</textarea></div>
-    </div>`;
-  }
-  if(!id) return '';
-  return `
-    <div class="field"><label>Job</label><select id="f_ijob">${jobOptionsForInvoice(inv)}</select></div>
-    <button class="btn btn-secondary" style="margin:-4px 0 14px;" onclick="createJobFromInvoice(${id})">＋ Create a Job from this Invoice</button>`;
-}
-
-
-/* ---- IMPORT A FULL INVOICE FROM CLAUDE (customer, cost, payments, scope, design notes) ---- */
-/* ---- INSTRUCTIONS THAT ANY AI (Claude, ChatGPT, etc.) CAN FOLLOW TO MAKE AN IMPORTABLE INVOICE ---- */
-const INVOICE_AI_INSTRUCTIONS = `I use Estimo, a job and invoice app for contractors. Help me create an invoice, then give me ONE block of JSON that I can paste into Estimo's "Import Full Invoice" screen.
-
-First ask me for anything you don't have yet:
-- customer name, address, phone, and email
-- what the work includes (you will group it by trade)
-- the contract price
-- any payments I already received (amount, date, and method)
-- the invoice date and the target completion date
-- whether the scope changed from what was first agreed, and any design notes
-
-Then reply with the invoice as a single JSON code block in exactly this format. Only "type", "customer.name", and "items" are required. Leave out anything that does not apply. The values below are only examples, so use my real details.
-
-{
-  "type": "invoice",
-  "customer": { "name": "Jane Smith", "phone": "(407) 555-0100", "email": "jane@example.com", "address": "123 Main St, Orlando, FL" },
-  "status": "sent",
-  "invoiceDate": "October 5, 2026",
-  "due": "2026-11-15",
-  "project": { "name": "Kitchen Remodel", "completion": "December 1, 2026" },
-  "items": [ { "name": "Kitchen Remodel — Full Scope of Work", "qty": 1, "price": 25000 } ],
-  "payments": [ { "amount": 5000, "date": "2026-10-01", "method": "Zelle", "note": "Deposit" } ],
-  "designConcept": {
-    "intro": "One or two sentences describing the overall design.",
-    "points": [ { "label": "Cabinets", "text": "shaker style, painted white." } ],
-    "samples": "Samples of tile, paint, and hardware will be presented for approval before installation."
-  },
-  "scopeCategories": [
-    { "category": "Demolition", "items": ["Remove existing cabinets and countertops", "Haul away debris"] },
-    { "category": "Electrical", "items": ["Add under-cabinet LED lighting"] }
-  ],
-  "scopeChange": { "original": "What was first agreed.", "revised": "What changed." },
-  "totalNote": "This total reflects the scope agreed as of this invoice date. Changes will be documented as a change order."
-}
-
-Rules:
-- Valid JSON only: double quotes, no comments, no trailing commas.
-- "status" must be one of: draft, sent, paid, overdue, void. Estimo shows "Partial" on its own once payments are listed, so use "sent" for an invoice that has partial payments.
-- "price" is the contract total in dollars, written as a plain number with no dollar sign and no commas.
-- Payment dates and "due" use YYYY-MM-DD. "invoiceDate" and "project.completion" are written out, like October 5, 2026.
-- Put the work in "scopeCategories": one category per trade, and each item is one short plain line.
-- Do not invent prices, dates, or payments. If something is missing, ask me.
-- Keep your reply to the code block plus one short line telling me to copy it.`;
-async function copyInvoiceInstructions(){
-  const msg = document.getElementById('instrMsg');
-  try{
-    await navigator.clipboard.writeText(INVOICE_AI_INSTRUCTIONS);
-    msg.textContent = 'Copied. Paste it into Claude (or any AI) and tell it about your invoice.';
-  }catch(e){
-    const box = document.getElementById('f_instrFallback');
-    box.value = INVOICE_AI_INSTRUCTIONS;
-    box.style.display = 'block';
-    box.focus(); box.select();
-    msg.textContent = 'Select all of the text below, copy it, and paste it into your AI.';
-  }
-}
-function openInvoiceImport(){
-  openModal(`
-    <div class="sheet-head"><h2>Import Invoice</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
-    <p style="font-size:13px;color:rgba(28,30,34,0.6);margin:-6px 0 14px;line-height:1.5;"><strong>Step 1.</strong> Tap Copy instructions, paste them into Claude (or any AI), and tell it about your invoice. <strong>Step 2.</strong> Copy the block it gives you, then tap Paste from clipboard below. It creates the customer (if new) and the whole invoice.</p>
-    <button class="btn btn-secondary" style="margin-bottom:6px;" onclick="copyInvoiceInstructions()">📘 Copy instructions for Claude</button>
-    <p id="instrMsg" style="font-size:12px;color:var(--green);margin:0 0 10px;min-height:16px;"></p>
-    <textarea id="f_instrFallback" readonly style="display:none;width:100%;min-height:120px;margin-bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;border-radius:10px;border:1.5px solid var(--line);padding:10px;"></textarea>
-    <button class="btn btn-secondary" style="margin-bottom:12px;" onclick="pasteIntoInvoiceImport()">📋 Paste from clipboard</button>
-    <div class="field"><textarea id="f_invImport" style="min-height:160px;font-family:'IBM Plex Mono',monospace;font-size:12px;" placeholder="Or paste the block here"></textarea></div>
-    <div id="invImportError" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;"></div>
-    <button class="btn btn-primary" onclick="runInvoiceImport()">Import Invoice</button>
-  `);
-}
-async function pasteIntoInvoiceImport(){
-  try{
-    const text = await navigator.clipboard.readText();
-    if(text && text.trim()){ document.getElementById('f_invImport').value = text.trim(); return; }
-    alert('Nothing found on your clipboard. Copy the invoice block first, then tap this again.');
-  }catch(e){
-    alert("Couldn't read your clipboard. Tap inside the box and paste it there instead.");
-  }
-}
-function invImportFail(msg){ const el = document.getElementById('invImportError'); el.textContent = msg; el.style.display = 'block'; }
-function runInvoiceImport(){
-  let raw = document.getElementById('f_invImport').value.trim();
-  raw = raw.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
-  let data;
-  try{ data = JSON.parse(raw); }
-  catch(e){
-    const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
-    try{ if(a < 0 || b <= a) throw e; data = JSON.parse(raw.slice(a, b + 1)); }
-    catch(e2){ invImportFail("Couldn't read that. Make sure you copied the whole block, from the first { to the last }."); return; }
-  }
-  if(!data || typeof data !== 'object' || data.type !== 'invoice'){ invImportFail('The block must say "type": "invoice".'); return; }
-  if(!data.customer || !data.customer.name){ invImportFail('The block needs a customer name.'); return; }
-
-  const c = data.customer;
-  let cust = db.customers.find(x=>x.name.trim().toLowerCase() === String(c.name).trim().toLowerCase());
-  if(cust){
-    if(c.phone) cust.phone = String(c.phone);
-    if(c.email) cust.email = String(c.email);
-    if(c.address) cust.address = String(c.address);
-  } else {
-    cust = {id:newId(), name:String(c.name), phone:String(c.phone||''), email:String(c.email||''), address:String(c.address||''), notes:''};
-    db.customers.push(cust);
-  }
-
-  const allowed = ['draft','sent','paid','overdue','void'];
-  const dcRaw = data.designConcept;
-  const inv = {
-    id: newId(),
-    customerId: cust.id,
-    status: allowed.includes(data.status) ? data.status : 'sent',
-    due: String(data.due||''),
-    invoiceDate: String(data.invoiceDate||''),
-    project: data.project ? {name:String(data.project.name||''), completion:String(data.project.completion||'')} : null,
-    items: (data.items||[]).map(i=>({name:String(i.name||'Item'), qty:Number(i.qty)||1, price:Number(i.price)||0})),
-    payments: (data.payments||[]).map(p=>({amount:Number(p.amount)||0, date:String(p.date||todayPlus(0)), method:String(p.method||'Payment'), note:String(p.note||'')})).filter(p=>p.amount>0),
-    scopeCategories: Array.isArray(data.scopeCategories) && data.scopeCategories.length
-      ? data.scopeCategories.map(k=>({category:String(k.category||''), items:(k.items||[]).map(String)})) : null,
-    scopeChange: (data.scopeChange && data.scopeChange.original) ? {original:String(data.scopeChange.original), revised:String(data.scopeChange.revised||'')} : null,
-    designConcept: dcRaw ? {intro:String(dcRaw.intro||''), points:(dcRaw.points||[]).map(p=>({label:String(p.label||''), text:String(p.text||'')})), samples:String(dcRaw.samples||'')} : null,
-    totalNote: String(data.totalNote||''),
-  };
-  db.invoices.push(inv);
-  makeJobForInvoice(inv);
-  saveData(); closeModal(); renderOwner();
-  openInvoiceModal(inv.id);
-}
-
-
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function generateInvoiceDocHTML(id){
   const inv = db.invoices.find(i=>i.id===id);
   const cust = db.customers.find(c=>c.id===inv.customerId) || {name:'',address:''};
@@ -1881,8 +1683,8 @@ function generateInvoiceDocHTML(id){
     const half = Math.ceil(inv.scopeCategories.length/2);
     const colHTML = (cats)=>cats.map(c=>`
         <div class="scope-cat">
-          <div class="cat-title">${esc(c.category)}</div>
-          <ul>${(c.items||[]).map(it=>`<li>${esc(it)}</li>`).join('')}</ul>
+          <div class="cat-title">${c.category}</div>
+          <ul>${(c.items||[]).map(it=>`<li>${it}</li>`).join('')}</ul>
         </div>`).join('');
     scopeHTML = `
     <div class="scope-head">Project Scope of Work</div>
@@ -1896,41 +1698,16 @@ function generateInvoiceDocHTML(id){
     scopeChangeHTML = `
     <div class="notice">
       <div class="t">Scope Change — Agreed by Both Parties</div>
-      <b>Original:</b> ${esc(inv.scopeChange.original)} &nbsp;→&nbsp;
-      <b>Revised:</b> ${esc(inv.scopeChange.revised||'')}
+      <b>Original:</b> ${inv.scopeChange.original} &nbsp;→&nbsp;
+      <b>Revised:</b> ${inv.scopeChange.revised||''}
     </div>`;
   }
   const licenseLine = (s.credentials && s.credentials.length)
     ? s.credentials.map(c=>`${c.label}: ${c.value}`).join(' &nbsp;•&nbsp; ')
     : '';
-  let metaExtraRows = '';
-  if(inv.invoiceDate) metaExtraRows += `<div class="meta-row"><span class="k2">Invoice Date</span><span class="v2">${esc(inv.invoiceDate)}</span></div>`;
-  if(inv.project && inv.project.name) metaExtraRows += `<div class="meta-row"><span class="k2">Project</span><span class="v2">${esc(inv.project.name)}</span></div>`;
-  if(inv.project && inv.project.completion) metaExtraRows += `<div class="meta-row"><span class="k2">Target Completion</span><span class="v2">${esc(inv.project.completion)}</span></div>`;
-  let designHTML = '';
-  const dc = inv.designConcept;
-  if(dc && (dc.intro || (dc.points && dc.points.length) || dc.samples)){
-    designHTML = '<div class="design-box"><div class="design-head">Design Concept</div>'
-      + (dc.intro ? `<p>${esc(dc.intro)}</p>` : '')
-      + ((dc.points && dc.points.length) ? '<ul>' + dc.points.map(p=>{
-          const t = p.text || '';
-          const sep = /^[(—–-]/.test(t) ? ' ' : ' — ';
-          return `<li><span class="zone-label">${esc(p.label)}</span>${esc(sep + t)}</li>`;
-        }).join('') + '</ul>' : '')
-      + (dc.samples ? `<p style="margin-top:12px;"><span class="zone-label">Material Samples &amp; Options:</span> ${esc(dc.samples)}</p>` : '')
-      + '</div>';
-  }
-  const totalNoteHTML = inv.totalNote ? `<p style="text-align:right;font-size:11.5px;color:var(--grey);margin:-16px 0 24px;">${esc(inv.totalNote)}</p>` : '';
-  let paymentsHTML = '';
-  if(inv.payments && inv.payments.length){
-    const fmtD = (d)=>{ const dt = new Date(d+'T00:00:00'); return isNaN(dt) ? esc(d) : dt.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}); };
-    paymentsHTML = '<div class="payhist"><div class="payhist-head">Payments Received</div><table class="payhist-table">'
-      + inv.payments.map((p,i)=>`<tr><td>Payment #${i+1} — ${fmtD(p.date)} · ${esc(p.method||'Payment')}${p.note?' · '+esc(p.note):''}</td><td class="amt">$${Number(p.amount).toLocaleString()}</td></tr>`).join('')
-      + `<tr class="payhist-total"><td>Total Received</td><td class="amt">$${paidToDate.toLocaleString()}</td></tr></table></div>`;
-  }
   const paymentRows = paidToDate > 0 ? `
-      <div class="totals-row"><span class="k">Contract Total</span><span class="v">$${total.toLocaleString()}</span></div>
-      <div class="totals-row"><span class="k">Paid to Date</span><span class="v">$${paidToDate.toLocaleString()}</span></div>` : '';
+      <div class="totals-row"><span class="k">Paid to Date</span><span class="v">$${paidToDate.toLocaleString()}</span></div>
+      <div class="totals-row"><span class="k">Balance</span><span class="v">$${balance.toLocaleString()}</span></div>` : '';
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice — ${cust.name}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
@@ -1975,19 +1752,6 @@ function generateInvoiceDocHTML(id){
     .notice{border:2px dashed var(--orange);background:#FFF6EE;padding:14px 16px;margin-bottom:24px;font-size:12.5px;}
     .notice .t{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:var(--orange);margin-bottom:6px;}
     .notice b{color:var(--ink);}
-    .design-box{border:2px solid var(--ink);background:#FAF9F6;padding:20px 24px;margin-bottom:28px;}
-    .design-head{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:15px;letter-spacing:0.4px;text-transform:uppercase;color:var(--ink);margin-bottom:10px;}
-    .design-box p{font-size:13px;line-height:1.65;color:var(--ink);margin:0 0 10px;}
-    .design-box ul{margin:0;padding-left:18px;}
-    .design-box li{font-size:13px;line-height:1.6;color:var(--ink);margin-bottom:4px;}
-    .zone-label{color:var(--orange);font-weight:700;}
-    .payhist{margin-bottom:26px;}
-    .payhist-head{font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:13px;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink);border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:10px;}
-    table.payhist-table{width:100%;border-collapse:collapse;border:2px solid var(--ink);}
-    table.payhist-table td{padding:10px 14px;font-size:13px;border-top:1px solid var(--line);}
-    table.payhist-table td.amt{text-align:right;font-weight:700;white-space:nowrap;}
-    table.payhist-table tr:first-child td{border-top:none;}
-    table.payhist-table tr.payhist-total td{background:#FAF9F6;font-weight:800;border-top:2px solid var(--ink);}
     .totals{display:flex;justify-content:flex-end;margin-bottom:30px;}
     .totals-box{width:320px;border:2px solid var(--ink);}
     .totals-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13.5px;border-bottom:1px solid var(--line);}
@@ -2021,11 +1785,10 @@ function generateInvoiceDocHTML(id){
     <div class="meta">
       <div class="meta-block"><div class="k">Bill To</div><div class="v">${cust.name}<br>${cust.address||''}</div></div>
       <div class="meta-block">
-        ${metaExtraRows}<div class="meta-row"><span class="k2">Due Date</span><span class="v2">${inv.due||'—'}</span></div>
+        <div class="meta-row"><span class="k2">Due Date</span><span class="v2">${inv.due||'—'}</span></div>
         <div class="meta-row"><span class="k2">Status</span><span class="v2"><span class="chip ${chipClass}">${displayStatus}</span></span></div>
       </div>
     </div>
-    ${designHTML}
     <table class="items">
       <thead><tr><th style="width:55%">Description</th><th class="amt">Qty</th><th class="amt">Price</th><th class="amt">Total</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -2036,8 +1799,6 @@ function generateInvoiceDocHTML(id){
       ${paymentRows}
       <div class="totals-row grand"><span class="k">${paidToDate>0?'Balance Due':'Total'}</span><span class="v">$${(paidToDate>0?balance:total).toLocaleString()}</span></div>
     </div></div>
-    ${totalNoteHTML}
-    ${paymentsHTML}
     <div class="footer">
       <div class="terms">This invoice reflects the agreed scope and total price. It is not an itemized accounting of materials or labor costs.${licenseLine?('<br><br>'+licenseLine):''}</div>
       <div class="pay">
@@ -2146,7 +1907,6 @@ function viewInvoiceDocument(id){
 }
 
 function convertJobToInvoice(jobId){
-  { const ex = linkedInvoiceFor(jobId); if(ex){ closeModal(); openInvoiceModal(ex.id); return; } }
   const job = db.jobs.find(j=>j.id===jobId);
   const newInv = {
     id:newId(), customerId:job.customerId, status:'sent', due:'',
