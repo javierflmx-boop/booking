@@ -391,6 +391,8 @@
       <div id="pulseEstimates" class="pulse-card" onclick="openBreakdown('estimates')"></div>
       <div id="pulseInvoices" class="pulse-card" onclick="openBreakdown('invoices')"></div>
 
+      <div id="hubInbox"></div>
+
       <div class="section-head"><h2>Today</h2><span class="count" id="todayCount"></span></div>
       <div id="todayList"></div>
       <div class="section-head"><h2>Up Next</h2></div>
@@ -1107,6 +1109,7 @@ function enterApp(){
   document.getElementById('ownerApp').classList.remove('hidden');
   renderOwner();
   setTimeout(checkPending407Import, 300);
+  loadHubInbox();
 }
 async function logout(){
   document.getElementById('ownerApp').classList.add('hidden');
@@ -2232,6 +2235,56 @@ function save407Import(){
   });
   import407Draft=null;
   saveData(); closeModal(); renderOwner();
+}
+
+/* ---------- HUB INBOX (items sent from 407 Command Center / 407AI) ---------- */
+var hubItems=[];
+var HUB_LABEL={ideas:'Idea',estimates:'Estimate',jobs:'Job',buy:'To buy',agenda:'Agenda',payments:'Payment'};
+function hubEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+async function loadHubInbox(){
+  if(!currentUserId) return;
+  try{
+    var r=await supabaseClient.from('command_center_entries').select('*').eq('status','pending').order('created_at',{ascending:true}).limit(50);
+    if(r.error){ console.error('Inbox load failed',r.error); return; }
+    hubItems=r.data||[]; renderHubInbox();
+  }catch(e){ console.error(e); }
+}
+function renderHubInbox(){
+  var box=document.getElementById('hubInbox'); if(!box) return;
+  if(!hubItems.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="section-head"><h2>Inbox</h2><span class="count">'+hubItems.length+' waiting</span></div>'+
+  hubItems.map(function(it){
+    var p=it.payload||{}, price=Number(p.price)||0;
+    var canAdd=(it.category==='estimates'||it.category==='jobs');
+    return '<div class="pulse-card"><div class="pulse-head"><h3>'+hubEsc(it.title)+'</h3><span class="total">'+(HUB_LABEL[it.category]||it.category)+(price?' · $'+price.toLocaleString():'')+'</span></div>'+
+      '<p style="font-size:13px;margin:0 0 10px;opacity:.7">'+hubEsc(p.customer?('For '+p.customer+'. '):'')+hubEsc(it.note||p.notes||'')+' <i>('+hubEsc(it.source||'unknown')+')</i></p>'+
+      '<div style="display:flex;gap:8px">'+
+      '<button class="btn btn-primary" onclick="hubAccept(\''+it.id+'\')">'+(canAdd?'Add to Estimo':'Mark done')+'</button>'+
+      '<button class="btn btn-secondary" onclick="hubDismiss(\''+it.id+'\')">Dismiss</button></div></div>';
+  }).join('');
+}
+async function hubSetStatus(id,status){
+  var r=await supabaseClient.from('command_center_entries').update({status:status,updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){ console.error(r.error); alert('Could not update the inbox item. Try again.'); return false; }
+  hubItems=hubItems.filter(function(x){return x.id!==id;}); renderHubInbox(); return true;
+}
+function hubDismiss(id){ hubSetStatus(id,'dismissed'); }
+async function hubAccept(id){
+  var it=hubItems.find(function(x){return x.id===id;}); if(!it) return;
+  var p=it.payload||{};
+  if(it.category==='estimates'||it.category==='jobs'){
+    var name=String(p.customer||'').trim()||'Unnamed customer', cid=null;
+    var m=db.customers.find(function(c){return (c.name||'').trim().toLowerCase()===name.toLowerCase();});
+    if(m) cid=m.id; else { cid=newId(); db.customers.push({id:cid,name:name,phone:p.phone||'',email:p.email||'',address:p.address||'',notes:''}); }
+    var title=it.title, price=Number(p.price)||0, notes=String(p.notes||it.note||'');
+    if(it.category==='estimates'){
+      db.estimates.push({id:newId(),customerId:cid,status:'draft',date:'',items:[{name:title,qty:1,price:price}],notes:notes,source:it.source||'hub',fromHub:it.id});
+    } else {
+      db.jobs.push({id:newId(),customerId:cid,title:title,status:'scheduled',date:p.date||'',time:'',address:p.address||'',notes:notes,items:[{name:title,qty:1,price:price}],helperId:null,source:it.source||'hub',fromHub:it.id});
+    }
+    saveData(); renderOwner();
+  }
+  hubSetStatus(id,'accepted');
 }
 (async function boot(){
   const { data: { session } } = await supabaseClient.auth.getSession();
