@@ -1106,6 +1106,7 @@ function enterApp(){
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('ownerApp').classList.remove('hidden');
   renderOwner();
+  setTimeout(checkPending407Import, 300);
 }
 async function logout(){
   document.getElementById('ownerApp').classList.add('hidden');
@@ -2155,6 +2156,83 @@ function deletePartner(id){ db.partners = db.partners.filter(p=>p.id!==id); save
 /* On load: if this device already has a logged-in session (Supabase
    remembers it), skip straight to the dashboard. Otherwise show the
    sign-up/log-in screen. */
+// ===== Import an estimate sent from 407AI (additive; only runs for #import=... links) =====
+(function stash407Import(){
+  try{
+    var m=(location.hash||'').match(/^#import=([A-Za-z0-9_-]+)$/);
+    if(m){
+      localStorage.setItem('estimo_pending_import', m[1]);
+      history.replaceState(null,'',location.pathname+location.search);
+    }
+  }catch(e){}
+})();
+function esc407(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function decode407Payload(s){
+  try{
+    s=s.replace(/-/g,'+').replace(/_/g,'/');
+    while(s.length%4) s+='=';
+    var o=JSON.parse(decodeURIComponent(escape(atob(s))));
+    if(!o||o.v!==1||typeof o.job!=='string') return null;
+    return o;
+  }catch(e){ return null; }
+}
+var import407Draft=null;
+function checkPending407Import(){
+  try{
+    var raw=localStorage.getItem('estimo_pending_import');
+    if(!raw) return;
+    localStorage.removeItem('estimo_pending_import');
+    var p=decode407Payload(raw);
+    if(!p || !db || !db.customers || !db.estimates) return;
+    open407ImportModal(p);
+  }catch(e){ console.error('407AI import failed:', e); }
+}
+function open407ImportModal(p){
+  import407Draft=p;
+  var dup = p.srcId && db.estimates.some(function(e){ return e.from407ai===String(p.srcId); });
+  var price = Number(p.price)||0;
+  openModal(`
+    <div class="sheet-head"><h2>Import from 407AI</h2><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    ${dup?'<p style="font-size:13px;color:#b3470d;margin:0 0 12px;">You already imported this estimate once. Saving will add another copy.</p>':''}
+    <div class="field"><label>Customer</label>
+      <select id="f_i_cust" onchange="document.getElementById('f_i_newwrap').style.display=this.value==='new'?'block':'none'">
+        <option value="">— Choose customer —</option>
+        ${db.customers.map(function(c){ return '<option value="'+c.id+'">'+esc407(c.name)+'</option>'; }).join('')}
+        <option value="new">➕ New customer…</option>
+      </select>
+    </div>
+    <div class="field" id="f_i_newwrap" style="display:none;"><label>New customer name</label><input id="f_i_newname" placeholder="Full name"/></div>
+    <div class="field"><label>Job</label><input id="f_i_job" value="${esc407(p.job)}"/></div>
+    <div class="field-row">
+      <div class="field"><label>Total ($)</label><input id="f_i_price" type="number" inputmode="decimal" value="${price}"/></div>
+      <div class="field"><label>Status</label>
+        <select id="f_i_status"><option value="draft">draft</option><option value="sent">sent</option></select>
+      </div>
+    </div>
+    ${p.notes?'<div style="font-size:12px;color:rgba(28,30,34,0.6);white-space:pre-wrap;margin:0 0 14px;">'+esc407(p.notes)+'</div>':''}
+    <button class="btn btn-primary" onclick="save407Import()">Save Estimate</button>
+  `);
+}
+function save407Import(){
+  var p=import407Draft; if(!p) return;
+  var sel=document.getElementById('f_i_cust').value, cid;
+  if(!sel){ document.getElementById('f_i_cust').focus(); return; }
+  if(sel==='new'){
+    var nm=document.getElementById('f_i_newname').value.trim();
+    if(!nm){ document.getElementById('f_i_newname').focus(); return; }
+    cid=newId();
+    db.customers.push({id:cid,name:nm,phone:'',email:'',address:'',notes:''});
+  } else { cid=Number(sel); }
+  var job=document.getElementById('f_i_job').value.trim()||'Estimate';
+  var price=Number(document.getElementById('f_i_price').value)||0;
+  db.estimates.push({
+    id:newId(), customerId:cid, status:document.getElementById('f_i_status').value, date:'',
+    items:[{name:job,qty:1,price:price}],
+    notes:p.notes||'', source:'407ai', from407ai:p.srcId?String(p.srcId):''
+  });
+  import407Draft=null;
+  saveData(); closeModal(); renderOwner();
+}
 (async function boot(){
   const { data: { session } } = await supabaseClient.auth.getSession();
   document.getElementById('bootLoader').classList.add('hidden');
